@@ -72,22 +72,49 @@ async function load() {
   $('extra-instructions').value = cfg.extraInstructions || '';
 }
 
-/* 切换厂商：自动填 Base URL、刷新模型候选、载入该厂商已存的 Key */
+/* 已下架/更名的旧模型 ID → 新 ID */
+const LEGACY_MODEL_MAP = {
+  'deepseek-chat': 'deepseek-v4-flash',
+  'deepseek-reasoner': 'deepseek-v4-pro',
+};
+
+/* 切换厂商：自动填 Base URL、刷新模型下拉、载入该厂商已存的 Key */
 function applyProvider(id, { keepBaseUrl, keepModel } = {}) {
   const p = PROVIDERS[id] || PROVIDERS.deepseek;
   $('base-url').value = keepBaseUrl !== undefined ? keepBaseUrl : p.baseUrl;
   $('base-url').placeholder = p.baseUrl || 'https://your-api-host/v1';
 
-  const dl = $('model-list');
-  dl.replaceChildren(...p.models.map(m => {
+  const sel = $('model');
+  const customInput = $('model-custom');
+  const models = [...p.models];
+  const wanted = keepModel && (LEGACY_MODEL_MAP[keepModel] || keepModel);
+  if (wanted && !models.includes(wanted)) models.push(wanted); // 保留用户此前保存的非候选模型
+
+  sel.replaceChildren(...models.map(m => {
     const o = document.createElement('option');
     o.value = m;
+    o.textContent = m;
     return o;
   }));
-  $('model').value = keepModel !== undefined ? keepModel : (p.models[0] || '');
-  $('model').placeholder = p.models[0] || '输入模型名';
+
+  if (models.length) {
+    sel.style.display = '';
+    customInput.style.display = 'none';
+    sel.value = wanted || models[0];
+  } else {
+    // 自定义厂商：无候选，改为输入框
+    sel.style.display = 'none';
+    customInput.style.display = '';
+    customInput.value = wanted || '';
+    customInput.placeholder = '输入模型名';
+  }
 
   $('api-key').value = apiKeys[id] || '';
+}
+
+function currentModel() {
+  const el = $('model').style.display === 'none' ? $('model-custom') : $('model');
+  return el.value.trim();
 }
 
 $('provider').addEventListener('change', () => {
@@ -126,7 +153,7 @@ $('save').addEventListener('click', async () => {
     provider: currentProvider,
     apiKeys,
     baseUrl,
-    model: $('model').value.trim() || PROVIDERS[currentProvider].models[0] || '',
+    model: currentModel() || PROVIDERS[currentProvider].models[0] || '',
     resumeMd: $('resume-md').value,
     extraInstructions: $('extra-instructions').value,
   });
@@ -145,7 +172,7 @@ $('toggle-key').addEventListener('click', () => {
 $('test').addEventListener('click', async () => {
   const key = $('api-key').value.trim();
   const baseUrl = ($('base-url').value.trim() || PROVIDERS[currentProvider].baseUrl).replace(/\/+$/, '');
-  const model = $('model').value.trim();
+  const model = currentModel();
   const status = $('test-status');
   if (!key) {
     status.className = 'status error';
