@@ -36,10 +36,18 @@ const PROVIDERS = {
   },
 };
 
+/* 已下架/更名的旧模型 ID → 新 ID */
+const LEGACY_MODEL_MAP = {
+  'deepseek-chat': 'deepseek-v4-flash',
+  'deepseek-reasoner': 'deepseek-v4-pro',
+};
+
 const $ = id => document.getElementById(id);
 
 let apiKeys = {};          // { deepseek: 'sk-...', openai: '...' } 内存缓存，保存时统一写回
 let currentProvider = 'deepseek';
+
+/* ---------- 初始化 ---------- */
 
 async function load() {
   const cfg = await chrome.storage.local.get(['provider', 'apiKeys', 'apiKey', 'baseUrl', 'model', 'resumeMd', 'extraInstructions']);
@@ -54,29 +62,48 @@ async function load() {
     await chrome.storage.local.remove('apiKey');
   }
 
-  const sel = $('provider');
-  for (const [id, p] of Object.entries(PROVIDERS)) {
-    const opt = document.createElement('option');
-    opt.value = id;
-    opt.textContent = p.name;
-    sel.appendChild(opt);
-  }
-  sel.value = provider;
   currentProvider = provider;
-
+  renderProviders(provider);
   applyProvider(provider, {
     keepBaseUrl: cfg.baseUrl || undefined,
     keepModel: cfg.model || undefined,
   });
   $('resume-md').value = cfg.resumeMd || '';
   $('extra-instructions').value = cfg.extraInstructions || '';
+  updateResumeCount();
+  $('ver').textContent = chrome.runtime.getManifest().version;
 }
 
-/* 已下架/更名的旧模型 ID → 新 ID */
-const LEGACY_MODEL_MAP = {
-  'deepseek-chat': 'deepseek-v4-flash',
-  'deepseek-reasoner': 'deepseek-v4-pro',
-};
+/* ---------- 厂商卡片 ---------- */
+
+function renderProviders(activeId) {
+  const grid = $('provider-grid');
+  grid.replaceChildren(...Object.entries(PROVIDERS).map(([id, p]) => {
+    const card = document.createElement('button');
+    card.type = 'button';
+    card.className = 'provider-card' + (id === activeId ? ' selected' : '');
+    card.dataset.provider = id;
+
+    const name = document.createElement('span');
+    name.className = 'provider-name';
+    name.textContent = p.name;
+    const meta = document.createElement('span');
+    meta.className = 'provider-meta';
+    meta.textContent = p.models.length ? `${p.models.length} 款模型` : 'OpenAI 兼容';
+    card.append(name, meta);
+
+    card.addEventListener('click', () => {
+      if (currentProvider === id) return;
+      apiKeys[currentProvider] = $('api-key').value.trim(); // 暂存当前厂商的 Key
+      currentProvider = id;
+      applyProvider(id);
+      grid.querySelectorAll('.provider-card').forEach(c => c.classList.toggle('selected', c === card));
+    });
+    return card;
+  }));
+}
+
+/* ---------- 厂商联动 ---------- */
 
 /* 切换厂商：自动填 Base URL、刷新模型下拉、载入该厂商已存的 Key */
 function applyProvider(id, { keepBaseUrl, keepModel } = {}) {
@@ -117,11 +144,7 @@ function currentModel() {
   return el.value.trim();
 }
 
-$('provider').addEventListener('change', () => {
-  apiKeys[currentProvider] = $('api-key').value.trim(); // 暂存当前厂商的 Key
-  currentProvider = $('provider').value;
-  applyProvider(currentProvider);
-});
+/* ---------- 保存 ---------- */
 
 /* 非官方地址需要运行时主机权限才能 fetch */
 async function ensureHostPermission(baseUrl) {
@@ -162,6 +185,8 @@ $('save').addEventListener('click', async () => {
   setTimeout(() => { $('save-status').textContent = ''; }, 2000);
 });
 
+/* ---------- Key 显示 / 测试连接 ---------- */
+
 $('toggle-key').addEventListener('click', () => {
   const input = $('api-key');
   const show = input.type === 'password';
@@ -181,6 +206,7 @@ $('test').addEventListener('click', async () => {
   }
   status.className = 'status';
   status.textContent = '测试中…';
+  $('test').classList.add('loading');
   try {
     let res = await fetch(`${baseUrl}/models`, { headers: { Authorization: `Bearer ${key}` } });
     if (res.ok) {
@@ -214,7 +240,33 @@ $('test').addEventListener('click', async () => {
   } catch (e) {
     status.className = 'status error';
     status.textContent = `请求失败：${e?.message || e}（自定义地址请先点保存授权）`;
+  } finally {
+    $('test').classList.remove('loading');
   }
 });
+
+/* ---------- 侧栏导航：平滑滚动 + 滚动高亮 ---------- */
+
+const navLinks = [...document.querySelectorAll('.rail-nav a')];
+navLinks.forEach(a => a.addEventListener('click', e => {
+  e.preventDefault();
+  document.querySelector(a.getAttribute('href'))?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}));
+const spy = new IntersectionObserver(entries => {
+  entries.forEach(en => {
+    if (en.isIntersecting) {
+      navLinks.forEach(a => a.classList.toggle('active', a.getAttribute('href') === `#${en.target.id}`));
+    }
+  });
+}, { rootMargin: '-25% 0px -65% 0px' });
+document.querySelectorAll('.panel').forEach(p => spy.observe(p));
+
+/* ---------- 简历字数 ---------- */
+
+function updateResumeCount() {
+  const n = $('resume-md').value.length;
+  $('resume-count').textContent = n ? `${n} 字` : '';
+}
+$('resume-md').addEventListener('input', updateResumeCount);
 
 load();

@@ -6,58 +6,69 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="options">
-  <div class="shell">
-    <header class="brand">
+  <aside class="rail">
+    <div class="rail-brand">
+      <img class="rail-logo" src="assets/offerbuddy-logo-v2-48.png" alt="">
       <div class="wordmark">OfferBuddy<span class="dot">.</span></div>
       <div class="brand-line"><span></span></div>
-    </header>
+    </div>
+    <nav class="rail-nav">
+      <a href="#sec-api" class="active">API</a>
+      <a href="#sec-resume">简历</a>
+      <a href="#sec-pref">填写偏好</a>
+    </nav>
+    <div class="rail-foot" id="ver"></div>
+  </aside>
 
-    <main class="options-card">
-      <section>
-        <p class="eyebrow">API</p>
-        <label class="field">
-          <span>厂商</span>
-          <select id="provider"></select>
-        </label>
+  <main class="content">
+    <section id="sec-api" class="panel">
+      <header class="panel-head"><span class="panel-index">01</span><h2>API</h2></header>
+      <div id="provider-grid" class="provider-grid"></div>
+      <div class="fields">
         <label class="field">
           <span>Key</span>
           <div class="key-row">
             <input id="api-key" type="password" placeholder="sk-..." autocomplete="off">
             <button id="toggle-key" type="button" class="secondary">显示</button>
           </div>
-          <span class="hint">仅存本机浏览器，按厂商分开保存</span>
+          <span class="hint">仅存本机，按厂商分开保存</span>
         </label>
-        <label class="field">
-          <span>Base URL</span>
-          <input id="base-url" type="text">
-        </label>
-        <label class="field">
-          <span>模型</span>
-          <select id="model"></select>
-          <input id="model-custom" type="text" placeholder="输入模型名" style="display:none">
-        </label>
+        <div class="field-duo">
+          <label class="field">
+            <span>Base URL</span>
+            <input id="base-url" type="text">
+          </label>
+          <label class="field">
+            <span>模型</span>
+            <select id="model"></select>
+            <input id="model-custom" type="text" placeholder="输入模型名" style="display:none">
+          </label>
+        </div>
         <div class="row">
           <button id="test" type="button" class="secondary">测试连接</button>
           <span id="test-status" class="status"></span>
         </div>
-      </section>
+      </div>
+    </section>
 
-      <section>
-        <p class="eyebrow">简历</p>
+    <section id="sec-resume" class="panel">
+      <header class="panel-head"><span class="panel-index">02</span><h2>简历</h2></header>
+      <div class="ta-wrap">
         <textarea id="resume-md" rows="18" spellcheck="false" placeholder="Markdown 格式"></textarea>
-      </section>
+        <span class="ta-count" id="resume-count"></span>
+      </div>
+    </section>
 
-      <section>
-        <p class="eyebrow">填写偏好</p>
-        <textarea id="extra-instructions" rows="2" spellcheck="false" placeholder="可选，如：期望薪资填「面议」"></textarea>
-      </section>
-    </main>
-  </div>
+    <section id="sec-pref" class="panel">
+      <header class="panel-head"><span class="panel-index">03</span><h2>填写偏好</h2></header>
+      <textarea id="extra-instructions" rows="2" spellcheck="false" placeholder="可选，如：期望薪资填「面议」"></textarea>
+    </section>
+  </main>
 
   <div class="save-bar">
     <div class="save-bar-inner">
-      <button id="save" type="button" class="primary">保存</button>
       <span id="save-status" class="status"></span>
+      <button id="save" type="button" class="primary">保存</button>
     </div>
   </div>
 
