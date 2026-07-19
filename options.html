@@ -16,19 +16,25 @@
       <section>
         <p class="eyebrow">API</p>
         <label class="field">
+          <span>厂商</span>
+          <select id="provider"></select>
+        </label>
+        <label class="field">
           <span>Key</span>
           <div class="key-row">
             <input id="api-key" type="password" placeholder="sk-..." autocomplete="off">
             <button id="toggle-key" type="button" class="secondary">显示</button>
           </div>
+          <span class="hint">仅存本机浏览器，按厂商分开保存</span>
         </label>
         <label class="field">
           <span>Base URL</span>
-          <input id="base-url" type="text" placeholder="https://api.deepseek.com">
+          <input id="base-url" type="text">
         </label>
         <label class="field">
           <span>模型</span>
-          <input id="model" type="text" placeholder="deepseek-chat">
+          <input id="model" type="text" list="model-list">
+          <datalist id="model-list"></datalist>
         </label>
         <div class="row">
           <button id="test" type="button" class="secondary">测试连接</button>

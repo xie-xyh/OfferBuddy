@@ -4,7 +4,13 @@
    API Key 只存放在 chrome.storage.local，由用户在设置页自行填写。 */
 
 const DEFAULT_BASE_URL = 'https://api.deepseek.com';
-const DEFAULT_MODEL = 'deepseek-chat';
+const DEFAULT_MODEL = 'deepseek-v4-flash';
+
+/* 已下架/更名的旧模型 ID → 新 ID（仅兜底显示与调用，不改写用户配置） */
+const LEGACY_MODEL_MAP = {
+  'deepseek-chat': 'deepseek-v4-flash',
+  'deepseek-reasoner': 'deepseek-v4-pro',
+};
 const REQUEST_TIMEOUT_MS = 60000;
 
 const SYSTEM_PROMPT = `你是招聘网页表单自动填写助手。用户会给你：
@@ -49,14 +55,19 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 });
 
 async function loadConfig() {
-  const raw = await chrome.storage.local.get(['apiKey', 'baseUrl', 'model', 'resumeMd', 'extraInstructions']);
-  if (!raw.apiKey) return { error: { ok: false, error: 'NO_API_KEY' } };
+  const raw = await chrome.storage.local.get(['provider', 'apiKeys', 'apiKey', 'baseUrl', 'model', 'resumeMd', 'extraInstructions']);
+  const provider = raw.provider || 'deepseek';
+  // 按厂商取 Key；raw.apiKey 为旧版单 Key 配置的兼容兜底
+  const apiKey = (raw.apiKeys && raw.apiKeys[provider]) || raw.apiKey || '';
+  if (!apiKey) return { error: { ok: false, error: 'NO_API_KEY' } };
   if (!raw.resumeMd || !raw.resumeMd.trim()) return { error: { ok: false, error: 'NO_RESUME' } };
   return {
     cfg: {
-      ...raw,
+      apiKey,
       baseUrl: (raw.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, ''),
-      model: raw.model || DEFAULT_MODEL,
+      model: LEGACY_MODEL_MAP[raw.model] || raw.model || DEFAULT_MODEL,
+      resumeMd: raw.resumeMd,
+      extraInstructions: raw.extraInstructions,
     },
   };
 }

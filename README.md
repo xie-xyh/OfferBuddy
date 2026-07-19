@@ -1,6 +1,6 @@
 # OfferBuddy — AI 简历自动填写（Chrome 扩展）
 
-基于 DeepSeek 大模型的 Manifest V3 Chrome 扩展：在招聘网页上一键识别表单字段，按你的简历（Markdown）自动填写，填充结果绿框高亮，人工核对后自行提交。
+基于大模型的 Manifest V3 Chrome 扩展：在招聘网页上一键识别表单字段，按你的简历（Markdown）自动填写，填充结果绿框高亮，人工核对后自行提交。支持 DeepSeek / OpenAI / Moonshot（Kimi）/ 智谱 GLM / 通义千问及任意 OpenAI 兼容接口。
 
 ## 功能
 
@@ -21,15 +21,16 @@
 
 ## 配置
 
-右键扩展图标 →「选项」，或点 popup 里的「设置 API Key / 简历」：
+右键扩展图标 →「选项」，或点 popup 里的「设置」：
 
-- **API Key**：你的 DeepSeek Key（`sk-...`），只保存在本机 `chrome.storage.local`
-- **Base URL**：默认 `https://api.deepseek.com`；如用自建代理改成你的地址（保存时会请求该站点权限）
-- **模型**：默认 `deepseek-chat`
-- **我的简历（Markdown）**：粘贴完整简历
+- **厂商**：DeepSeek / OpenAI / Moonshot（Kimi）/ 智谱 GLM / 通义千问 / 自定义（OpenAI 兼容接口）
+- **Key**：对应厂商的 API Key，只保存在本机 `chrome.storage.local`，按厂商分开存储、互不影响
+- **Base URL**：选厂商后自动填入，可改为自建代理地址（保存时会请求该站点权限）
+- **模型**：选厂商后给出候选，可自由输入其他模型名
+- **简历**：粘贴完整 Markdown 简历
 - **填写偏好**：可选，如「期望薪资一律填面议」
 
-「测试连接」会请求 `GET {Base URL}/models` 验证 Key 可用。
+「测试连接」优先请求 `GET {Base URL}/models`，该接口不存在时降级为最小对话请求验证。
 
 ## 使用
 
