@@ -1,0 +1,94 @@
+/* AI 简历自动填写 — popup / options 共用样式 */
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", "Segoe UI", sans-serif;
+  font-size: 14px;
+  color: #1f2329;
+  background: #f7f8fa;
+}
+
+h1 { font-size: 16px; margin: 0 0 12px; }
+h2 { font-size: 14px; margin: 0 0 10px; }
+
+button {
+  font: inherit;
+  cursor: pointer;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  padding: 8px 14px;
+}
+button:disabled { opacity: 0.6; cursor: default; }
+
+.primary {
+  background: #2563eb;
+  color: #fff;
+  width: 100%;
+}
+.primary:hover:not(:disabled) { background: #1d4ed8; }
+
+.secondary {
+  background: #fff;
+  border-color: #d0d5dd;
+  color: #1f2329;
+}
+.secondary:hover { background: #f2f4f7; }
+
+.status { font-size: 13px; color: #667085; line-height: 1.5; }
+.status.success { color: #16a34a; }
+.status.error { color: #dc2626; }
+.status.working { color: #2563eb; }
+
+.note { font-size: 12px; color: #98a2b3; line-height: 1.6; }
+
+/* popup */
+body.popup {
+  width: 300px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* options */
+body.options { padding: 24px 12px; }
+.options-card {
+  max-width: 720px;
+  margin: 0 auto;
+  background: #fff;
+  border: 1px solid #eaecf0;
+  border-radius: 10px;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+.options-card section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field > span { font-size: 13px; color: #475467; }
+.key-row { display: flex; gap: 8px; }
+.key-row input { flex: 1; }
+
+input[type="text"],
+input[type="password"],
+textarea {
+  font: inherit;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid #d0d5dd;
+  border-radius: 6px;
+  background: #fff;
+  color: #1f2329;
+}
+textarea { resize: vertical; font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+input:focus, textarea:focus { outline: 2px solid #93c5fd; outline-offset: 0; border-color: #2563eb; }
+
+.row { display: flex; align-items: center; gap: 10px; }
+.actions { display: flex; align-items: center; gap: 12px; }
+.actions .primary { width: auto; padding: 8px 28px; }

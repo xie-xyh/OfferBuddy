@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>模拟招聘表单 — AI 简历自动填写演示</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; padding: 32px 16px;
+      font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: #f0f2f5; color: #1f2329;
+    }
+    main {
+      max-width: 640px; margin: 0 auto; background: #fff;
+      border-radius: 10px; padding: 28px; box-shadow: 0 2px 8px rgba(0,0,0,.06);
+    }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    .sub { color: #667085; font-size: 13px; margin: 0 0 20px; }
+    .item { margin-bottom: 16px; }
+    .item > label, .item > .label { display: block; font-size: 13px; color: #475467; margin-bottom: 6px; }
+    input[type="text"], input[type="email"], input[type="tel"], input[type="number"],
+    input[type="date"], input[type="month"], select, textarea {
+      width: 100%; padding: 8px 10px; font: inherit;
+      border: 1px solid #d0d5dd; border-radius: 6px; background: #fff;
+    }
+    textarea { resize: vertical; }
+    .radio-row, .check-row { display: flex; gap: 16px; align-items: center; font-size: 14px; }
+    .required::after { content: " *"; color: #dc2626; }
+    button { padding: 10px 24px; font: inherit; color: #fff; background: #2563eb; border: 0; border-radius: 6px; cursor: pointer; }
+    .tip { font-size: 12px; color: #98a2b3; margin-top: 4px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>高级前端工程师 — 在线申请</h1>
+  <p class="sub">本页面为本地演示表单，提交不会发生任何网络请求。</p>
+
+  <form id="job-form" onsubmit="event.preventDefault(); alert('演示：表单已提交（仅本地提示）');">
+    <div class="item">
+      <label class="required" for="name">姓名</label>
+      <input id="name" name="name" type="text" required autocomplete="name">
+    </div>
+
+    <div class="item">
+      <label class="required" for="email">邮箱</label>
+      <input id="email" name="email" type="email" required autocomplete="email">
+    </div>
+
+    <div class="item">
+      <label class="required" for="phone">手机号码</label>
+      <input id="phone" name="phone" type="tel" required placeholder="11 位手机号">
+    </div>
+
+    <div class="item">
+      <label for="birthday">出生日期</label>
+      <input id="birthday" name="birthday" type="date">
+    </div>
+
+    <div class="item">
+      <label class="required" for="years">工作年限</label>
+      <select id="years" name="years" required>
+        <option value="">请选择</option>
+        <option value="fresh">应届毕业生</option>
+        <option value="1-3">1-3 年</option>
+        <option value="3-5">3-5 年</option>
+        <option value="5-10">5-10 年</option>
+        <option value="10+">10 年以上</option>
+      </select>
+    </div>
+
+    <div class="item">
+      <label for="degree">最高学历</label>
+      <select id="degree" name="degree">
+        <option value="">请选择</option>
+        <option>大专</option>
+        <option>本科</option>
+        <option>硕士</option>
+        <option>博士</option>
+      </select>
+    </div>
+
+    <div class="item">
+      <label for="city">期望工作城市</label>
+      <input id="city" name="city" type="text" placeholder="例如：杭州">
+      <p class="tip">⚛ 这个输入框模拟 React 受控组件：只有正确派发 input 事件的填写才会被保留（1.5s 后非法直写的值会被"框架"清掉）。</p>
+    </div>
+
+    <div class="item">
+      <label for="salary">期望月薪（元）</label>
+      <input id="salary" name="salary" type="number" min="0" step="1000" placeholder="面议可留空">
+    </div>
+
+    <div class="item">
+      <span class="label">目前状态</span>
+      <div class="radio-row">
+        <label><input type="radio" name="status" value="employed"> 在职</label>
+        <label><input type="radio" name="status" value="left"> 已离职</label>
+        <label><input type="radio" name="status" value="student"> 在读</label>
+      </div>
+    </div>
+
+    <div class="item">
+      <label for="intro">自我介绍</label>
+      <textarea id="intro" name="intro" rows="5" placeholder="用一段话介绍你的经历与优势"></textarea>
+    </div>
+
+    <div class="item">
+      <div class="check-row">
+        <label><input type="checkbox" name="agree" value="yes"> 我已阅读并同意《候选人信息收集协议》</label>
+      </div>
+    </div>
+
+    <button type="submit">提交申请</button>
+  </form>
+</main>
+
+<script>
+  /* 模拟 React 受控组件行为：
+     内部 state 只认 input 事件；定时"重渲染"会把未经事件写入的值刷掉。 */
+  const cityState = { value: '' };
+  const cityInput = document.getElementById('city');
+  cityInput.addEventListener('input', e => { cityState.value = e.target.value; });
+  setInterval(() => {
+    if (cityInput.value !== cityState.value) cityInput.value = cityState.value;
+  }, 1500);
+</script>
+</body>
+</html>
