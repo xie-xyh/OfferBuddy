@@ -10,7 +10,8 @@ const REQUEST_TIMEOUT_MS = 60000;
 const SYSTEM_PROMPT = `你是招聘网页表单自动填写助手。用户会给你：
 1) 简历（Markdown 格式）
 2) 可选的附加填写指令
-3) 网页表单字段列表（JSON 数组，每项含 index/tag/type/name/id/label/placeholder/required；select 含 options；radio/checkbox 含 checked）
+3) 网页表单字段列表（JSON 数组，每项含 index/tag/type/name/id/label/group/placeholder/required；select 含 options；radio/checkbox 含 checked）。
+   其中 group 是字段所在板块/分组的标题（如“项目经验”“教育经历”）。复合字段（如“起止时间”的年/月多个下拉）共享同一个 group 或 label，请按语义分别填：年填 4 位年份、月填 1-12 的月份。
 
 请判断每个字段应填的内容，返回一个纯 JSON 对象：{ "字段index（字符串）": "要填写的值（字符串）" }。
 
@@ -20,18 +21,20 @@ const SYSTEM_PROMPT = `你是招聘网页表单自动填写助手。用户会给
 3. select 下拉框：从 options 中挑最合适的一项，【原样返回该项文本】（含数字、空格、单位），不要只回数字或自造文本。
 4. radio：只对你认为应被选中的那一项返回 "true"，其余不返回。checkbox：需要勾选返回 "true"，需要取消返回 "false"，不确定则不返回。
 5. type=date 返回 "YYYY-MM-DD"；type=month 返回 "YYYY-MM"；type=number 只返回数字（如年龄、工作年限）。
-6. 长文本经历类字段（项目经历、工作内容、教育经历描述、实习/实践经历、自我评价等）：【直接使用简历中的原文】，不得压缩、概括或改写；可截取对应段落原文拼接。仅当字段有明确字数限制时，才保留原文开头至限额。
+6. 长文本经历类字段（项目描述、工作内容、工作总结、教育经历描述、实习/实践经历、自我评价等）：【逐字复制简历中对应段落的原文】，一个标点都不得改动，禁止概括、润色、扩写、改写，保留原文的换行与列表符号。同一 group 下有多组重复字段时，按简历中经历的先后顺序一一对应填写。仅当字段有明确字数上限时，截取原文开头至限额。
 7. 其他开放文本（如一句话求职意向）：基于简历事实撰写，语言与简历一致。
 8. 附加指令优先级最高（例如“期望薪资填面议”）。`;
 
 const PLAN_PROMPT = `你是表单结构分析助手。招聘网页通常允许重复添加同类条目（如多段教育经历、工作经历、项目经历）。
 用户会给你：
 1) 简历（Markdown 格式）
-2) 页面上检测到的「添加条目」按钮列表（每项含 section 编号、按钮文本 buttonText、该按钮所在区域当前已有的字段标签 currentFields）
+2) 页面上检测到的「添加条目」按钮列表（每项含 section 编号、按钮文本 buttonText、所在板块标题 sectionTitle、该区域当前已有的字段标签 currentFields）
 
 请根据简历判断：每个按钮【还需要点击几次】，页面上的条目数才能覆盖简历中的同类经历。
 - 返回纯 JSON：{ "addClicks": { "s0": 1 } }，只输出需要点击的按钮，其余不输出。
-- 例如简历有两段教育经历，而页面当前只有一组教育经历字段，则该按钮点击 1 次。
+- 按 sectionTitle 与 currentFields 判断该按钮对应简历中的哪类经历（教育/工作/项目/实习等）。
+- currentFields 若已按组重复出现（同一套字段出现多遍），说明页面已有多组，按实际组数计算还差几组。
+- 例如简历有两段项目经历，而页面当前只有一组项目字段，则该按钮点击 1 次。
 - 每个按钮最多 4 次；没有把握就给 0 或不输出。只输出 JSON。`;
 
 chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
@@ -73,7 +76,7 @@ async function callChat(cfg, systemPrompt, userMessage) {
       },
       body: JSON.stringify({
         model: cfg.model,
-        temperature: 0.2,
+        temperature: 0,
         response_format: { type: 'json_object' },
         messages: [
           { role: 'system', content: systemPrompt },

@@ -1,6 +1,6 @@
 /* OfferBuddy — 内容脚本
    由 popup 通过 chrome.scripting.executeScript 按需注入：
-   识别字段 → 规划并点击「添加条目」→ 调大模型 → 逐个可见地回填（滚动跟随 + 动画高亮）。
+   识别字段（含所在板块分组）→ 规划并点击「添加」→ 调大模型 → 逐个可见地回填。
    兼容 React/Vue 受控组件：原生 setter 设值 + 派发 input/change 事件。 */
 
 (() => {
@@ -11,9 +11,11 @@
   const MAX_SECTIONS = 6;
   const MAX_CLICKS_PER_SECTION = 4;
   const FILL_DELAY_MS = 160;
-  const CLICK_WAIT_MS = 500;
+  const CLICK_WAIT_MS = 600;
   const SKIP_INPUT_TYPES = new Set(['hidden', 'submit', 'button', 'image', 'reset', 'file', 'password']);
-  const ADD_BUTTON_RE = /(添加|新增|增加)\s*(一段|一条|一项|个)?\s*(教育|学历|工作|实习|实践|项目|经历|经验|履历|证书|语言)|^\s*\+\s*(添加|新增)/;
+  /* “＋ 添加”“添加教育经历”“新增一条工作经历” 都命中 */
+  const ADD_TEXT_RE = /^[+＋]?\s*(添加|新增)\s*(一段|一条|一项|个)?\s*(教育|学历|工作|实习|实践|项目|经历|经验|履历|证书|语言)?\s*$/;
+  const HEADING_SEL = 'h1,h2,h3,h4,h5,h6,legend,strong,b,[class*="title"],[class*="header"],[class*="Title"],[class*="Header"]';
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const norm = s => (s || '').trim().toLowerCase();
@@ -30,6 +32,11 @@
 
   function textOf(node) {
     return (node?.innerText || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function shortText(node) {
+    const t = textOf(node);
+    return (t && t.length <= 20) ? t : '';
   }
 
   function getLabel(el) {
@@ -66,6 +73,32 @@
     return '';
   }
 
+  /* 字段所在板块/分组标题（如“项目经验”“起止时间”），给大模型分组语义 */
+  function getGroupTitle(el) {
+    let node = el.parentElement;
+    let depth = 0;
+    while (node && node !== document.body && depth < 6) {
+      const head = node.querySelector(HEADING_SEL);
+      if (head && !head.contains(el) && !head.matches('input,select,textarea')) {
+        const t = shortText(head);
+        if (t && !ADD_TEXT_RE.test(t)) return t;
+      }
+      if (depth >= 1) {
+        let sib = node.previousElementSibling;
+        while (sib) {
+          if (!sib.querySelector('input,select,textarea')) {
+            const t = shortText(sib);
+            if (t && !ADD_TEXT_RE.test(t)) return t;
+          }
+          sib = sib.previousElementSibling;
+        }
+      }
+      node = node.parentElement;
+      depth++;
+    }
+    return '';
+  }
+
   function collectFields() {
     const els = [...document.querySelectorAll('input, textarea, select')]
       .filter(el => {
@@ -83,6 +116,7 @@
         name: el.name || '',
         id: el.id || '',
         label: getLabel(el).slice(0, 120),
+        group: getGroupTitle(el).slice(0, 30),
         placeholder: (el.getAttribute('placeholder') || '').slice(0, 80),
         required: !!el.required,
       };
@@ -97,7 +131,7 @@
     return { els, fields };
   }
 
-  /* ---------- 页面上的状态徽标（填写过程可视化） ---------- */
+  /* ---------- 页面上的状态徽标 ---------- */
 
   let badgeEl = null;
 
@@ -118,9 +152,9 @@
     badgeEl = document.createElement('div');
     badgeEl.style.cssText = [
       'position:fixed', 'top:16px', 'right:16px', 'z-index:2147483647',
-      'background:#1C2536', 'color:#fff', 'padding:10px 14px', 'border-radius:10px',
+      'background:#1C2536', 'color:#fff', 'padding:9px 13px', 'border-radius:10px',
       'font:13px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif',
-      'box-shadow:0 6px 20px rgba(0,0,0,.28)', 'max-width:320px',
+      'box-shadow:0 6px 20px rgba(0,0,0,.28)', 'max-width:300px',
       'display:flex', 'align-items:center', 'gap:8px', 'transition:opacity .35s',
     ].join(';');
     document.documentElement.appendChild(badgeEl);
@@ -137,7 +171,7 @@
       icon.style.cssText = `width:8px;height:8px;flex:none;border-radius:50%;background:${mode === 'error' ? '#f87171' : '#34d399'}`;
     }
     const label = document.createElement('span');
-    label.textContent = `OfferBuddy · ${text}`;
+    label.textContent = text;
     badge.replaceChildren(icon, label);
   }
 
@@ -159,7 +193,7 @@
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  /* select 匹配：精确 → 包含 → 数字（年龄/年限/年份等） */
+  /* select 匹配：精确 → 包含 → 数字（年龄/年限/年月等） */
   function fillSelect(el, value) {
     const v = norm(value);
     const opts = [...el.options].filter(o => !o.disabled && norm(o.text) && !/^(请选择|请选择一项|select)/.test(norm(o.text)));
@@ -220,13 +254,42 @@
     return !!el.value; // 值被浏览器拒绝（格式仍不合法）则视为未填
   }
 
-  /* ---------- 「添加条目」检测与规划 ---------- */
+  /* ---------- 「添加」按钮检测与条目规划 ---------- */
+
+  /* 招聘站的添加按钮常是 span/div + cursor:pointer，不只 button/a */
+  function findAddButtons() {
+    return [...document.querySelectorAll('button, a, span, div, i, [role="button"], input[type="button"]')]
+      .filter(el => {
+        if (el.disabled || !isVisible(el)) return false;
+        const t = el.tagName === 'INPUT' ? (el.value || '').trim() : textOf(el);
+        if (!t || t.length > 15 || !ADD_TEXT_RE.test(t)) return false;
+        // 必须是叶级元素，避免容器因子节点文本命中
+        if ([...el.children].some(c => ADD_TEXT_RE.test(textOf(c)))) return false;
+        return /^(BUTTON|A|INPUT)$/.test(el.tagName)
+          || el.getAttribute('role') === 'button'
+          || !!el.onclick
+          || getComputedStyle(el).cursor === 'pointer';
+      });
+  }
+
+  function getSectionTitle(container, btn) {
+    const t = getGroupTitle(btn);
+    if (t) return t;
+    // 容器内第一个「非表单、非添加按钮」的短文本，通常就是板块标题
+    const nodes = container.querySelectorAll('*');
+    for (let i = 0; i < Math.min(nodes.length, 60); i++) {
+      const n = nodes[i];
+      if (n === btn || n.contains(btn)) continue;
+      if (n.querySelector('input,select,textarea')) continue;
+      if ([...n.children].some(c => textOf(c))) continue; // 只看叶级
+      const t = shortText(n);
+      if (t && !ADD_TEXT_RE.test(t)) return t;
+    }
+    return '';
+  }
 
   function findAddableSections(fields, els) {
-    const buttons = [...document.querySelectorAll('button, a, [role="button"], input[type="button"]')]
-      .filter(el => isVisible(el) && !el.disabled)
-      .filter(el => ADD_BUTTON_RE.test(textOf(el) || el.value || ''));
-
+    const buttons = findAddButtons();
     const seen = new Set();
     const sections = [];
     for (const btn of buttons) {
@@ -244,10 +307,11 @@
         .map(f => f.label || f.name || f.placeholder)
         .filter(Boolean)
         .slice(0, 12);
-      if (memberLabels.length < 1) continue;
+      if (!memberLabels.length) continue;
       sections.push({
         section: `s${sections.length}`,
         buttonText: (textOf(btn) || btn.value || '').slice(0, 30),
+        sectionTitle: getSectionTitle(container, btn),
         currentFields: memberLabels,
         _btn: btn,
       });
@@ -261,24 +325,26 @@
   async function startFill() {
     let { els, fields } = collectFields();
     if (!fields.length) return { ok: false, error: 'NO_FIELDS' };
-    setBadge(`识别到 ${fields.length} 个字段`);
+    setBadge(`识别 ${fields.length} 个字段`);
 
-    /* 1) 检测「添加条目」按钮，让大模型判断需要补几段经历 */
+    /* 1) 检测「添加」按钮，让大模型按简历段数判断需要补几组 */
     const sections = findAddableSections(fields, els);
     if (sections.length) {
-      setBadge('正在规划经历条目数量…');
+      setBadge('规划经历条目…');
       const plan = await chrome.runtime.sendMessage({
         type: 'PLAN_ENTRIES',
         url: location.href,
         title: document.title,
-        sections: sections.map(({ section, buttonText, currentFields }) => ({ section, buttonText, currentFields })),
+        sections: sections.map(({ section, buttonText, sectionTitle, currentFields }) => (
+          { section, buttonText, sectionTitle, currentFields }
+        )),
       });
       if (plan?.ok && plan.addClicks) {
         let added = false;
         for (const s of sections) {
           const clicks = Math.min(MAX_CLICKS_PER_SECTION, Math.max(0, parseInt(plan.addClicks[s.section], 10) || 0));
           for (let c = 0; c < clicks; c++) {
-            setBadge(`添加条目：${s.buttonText}`);
+            setBadge(`添加：${s.sectionTitle || s.buttonText}`);
             s._btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
             await sleep(300);
             s._btn.click();
@@ -291,7 +357,7 @@
     }
 
     /* 2) 大模型生成填写值 */
-    setBadge(`大模型生成中（${fields.length} 个字段）…`);
+    setBadge('生成填写内容…');
     const resp = await chrome.runtime.sendMessage({
       type: 'GENERATE_FILL',
       url: location.href,
@@ -299,26 +365,27 @@
       fields,
     });
     if (!resp || !resp.ok) {
-      setBadge('生成失败，请查看插件弹窗提示', 'error');
+      setBadge('生成失败', 'error');
       setTimeout(hideBadge, 5000);
       return resp || { ok: false, error: 'NO_RESPONSE' };
     }
 
     /* 3) 逐个可见地回填：滚动到字段 → 蓝色脉冲 → 填入 → 绿色描边 */
     const values = resp.values || {};
+    const toFill = fields
+      .map((field, i) => ({ field, el: els[i], raw: values[String(field.index)] }))
+      .filter(x => x.raw != null && String(x.raw).trim() !== '');
     let filled = 0;
     const skipped = [];
-    for (let i = 0; i < fields.length; i++) {
-      const field = fields[i];
-      const raw = values[String(field.index)];
-      if (raw == null || String(raw).trim() === '') continue; // 大模型主动留空
-      const el = els[i];
+    let k = 0;
+    for (const { field, el, raw } of toFill) {
+      k++;
       const label = field.label || field.name || field.placeholder || `字段 ${field.index}`;
       if (!el.isConnected) { skipped.push(label); continue; }
       el.scrollIntoView({ behavior: 'smooth', block: 'center' });
       el.classList.remove('ob-filled');
       el.classList.add('ob-filling');
-      setBadge(`填写中 ${filled + 1} · ${label}`);
+      setBadge(`填写 ${k}/${toFill.length} · ${label}`);
       await sleep(FILL_DELAY_MS);
       const ok = fillOne(el, field, raw);
       if (ok) {
@@ -332,7 +399,7 @@
       await sleep(60);
     }
 
-    setBadge(`完成：已填写 ${filled}/${fields.length} 项，请核对后手动提交`, 'done');
+    setBadge(`已填 ${filled} 项，请核对`, 'done');
     setTimeout(hideBadge, 8000);
     return { ok: true, filled, total: fields.length, skipped };
   }
@@ -342,7 +409,7 @@
     startFill()
       .then(sendResponse)
       .catch(err => {
-        setBadge('出现异常，已中断', 'error');
+        setBadge('中断', 'error');
         setTimeout(hideBadge, 5000);
         sendResponse({ ok: false, error: 'FILL_FAILED', detail: String(err?.message || err) });
       });

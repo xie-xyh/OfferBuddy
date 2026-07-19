@@ -14,7 +14,7 @@ function setStatus(kind, text) {
 
 fillBtn.addEventListener('click', async () => {
   fillBtn.disabled = true;
-  setStatus('working', '正在识别页面字段并调用大模型，请稍候…');
+  setStatus('working', '填写中，页面右上角有进度');
   try {
     const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!tab?.id || !/^https?:/.test(tab.url || '')) {

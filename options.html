@@ -10,14 +10,13 @@
     <header class="brand">
       <div class="wordmark">OfferBuddy<span class="dot">.</span></div>
       <div class="brand-line"><span></span></div>
-      <p class="tagline">设置 · 三步完成，之后一键填写</p>
     </header>
 
     <main class="options-card">
       <section>
-        <p class="eyebrow">01 · API 接入</p>
+        <p class="eyebrow">API</p>
         <label class="field">
-          <span>API Key</span>
+          <span>Key</span>
           <div class="key-row">
             <input id="api-key" type="password" placeholder="sk-..." autocomplete="off">
             <button id="toggle-key" type="button" class="secondary">显示</button>
@@ -38,28 +37,20 @@
       </section>
 
       <section>
-        <p class="eyebrow">02 · 我的简历</p>
-        <textarea id="resume-md" rows="16" spellcheck="false"
-          placeholder="# 张三&#10;&#10;- 电话：138-xxxx-xxxx&#10;- 邮箱：zhangsan@example.com&#10;- 工作年限：5 年&#10;&#10;## 工作经历&#10;..."></textarea>
-        <p class="hint">支持 Markdown。项目/工作/教育等长经历在填写时按原文填入，不会被压缩改写。</p>
+        <p class="eyebrow">简历</p>
+        <textarea id="resume-md" rows="18" spellcheck="false" placeholder="Markdown 格式"></textarea>
       </section>
 
       <section>
-        <p class="eyebrow">03 · 填写偏好（可选）</p>
-        <textarea id="extra-instructions" rows="3" spellcheck="false"
-          placeholder="例如：期望薪资一律填「面议」；自我介绍保持中文；求职意向优先后端开发"></textarea>
+        <p class="eyebrow">填写偏好</p>
+        <textarea id="extra-instructions" rows="2" spellcheck="false" placeholder="可选，如：期望薪资填「面议」"></textarea>
       </section>
-
-      <p class="note">
-        所有配置仅保存在本机浏览器（chrome.storage.local），不会上传到任何服务器；
-        点击「自动填写」时，简历与页面字段会发送给你配置的 API 地址（默认 DeepSeek），属预期行为。
-      </p>
     </main>
   </div>
 
   <div class="save-bar">
     <div class="save-bar-inner">
-      <button id="save" type="button" class="primary">保存设置</button>
+      <button id="save" type="button" class="primary">保存</button>
       <span id="save-status" class="status"></span>
     </div>
   </div>

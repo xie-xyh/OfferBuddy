@@ -1,6 +1,6 @@
 /* OfferBuddy — popup / options 共用样式
-   设计基调：冷调纸面 + 藏青墨色，玉绿作为「填写完成」的语义色。
-   签名元素：品牌名下会自己"填满"的进度线——呼应自动填写本身。 */
+   冷调纸面 + 藏青墨色，玉绿作为「完成」的语义色。
+   签名元素：品牌名下一根会自己填满的线。 */
 
 :root {
   --paper: #F4F6F9;
@@ -30,15 +30,16 @@ body {
 
 .brand { user-select: none; }
 .wordmark {
-  font-size: 22px;
-  font-weight: 800;
-  letter-spacing: -0.02em;
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
   color: var(--ink);
 }
 .wordmark .dot { color: var(--jade); }
 .brand-line {
-  height: 3px;
-  margin: 8px 0 6px;
+  height: 2px;
+  width: 56px;
+  margin-top: 7px;
   background: var(--line);
   border-radius: 2px;
   overflow: hidden;
@@ -48,11 +49,10 @@ body {
   height: 100%;
   width: 0;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--primary), var(--jade));
-  animation: brand-fill .9s cubic-bezier(.22, .8, .3, 1) .1s forwards;
+  background: var(--jade);
+  animation: brand-fill .8s cubic-bezier(.22, .8, .3, 1) .15s forwards;
 }
 @keyframes brand-fill { to { width: 100%; } }
-.tagline { margin: 0; font-size: 12px; letter-spacing: .04em; color: var(--muted); }
 
 /* ---------- 按钮 ---------- */
 
@@ -71,33 +71,34 @@ textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px;
 
 .primary {
   width: 100%;
-  padding: 11px 14px;
-  background: var(--primary);
+  padding: 10px 14px;
+  background: var(--ink);
   color: #fff;
-  font-weight: 600;
-  letter-spacing: .02em;
+  font-weight: 500;
+  letter-spacing: .04em;
 }
-.primary:hover:not(:disabled) { background: var(--primary-deep); }
+.primary:hover:not(:disabled) { background: #2A3550; }
 
 .secondary {
-  padding: 8px 12px;
+  padding: 7px 12px;
   background: var(--surface);
   border: 1px solid var(--line);
   color: var(--ink);
 }
-.secondary:hover { border-color: var(--primary); color: var(--primary); }
+.secondary:hover { border-color: var(--ink); }
 
-.link-btn { padding: 0; background: none; color: var(--primary); font-size: 13px; text-align: left; }
-.link-btn:hover { text-decoration: underline; }
+.link-btn { padding: 0; background: none; color: var(--muted); font-size: 13px; }
+.link-btn:hover { color: var(--ink); }
 
-/* ---------- 状态与提示 ---------- */
+/* ---------- 状态 ---------- */
 
 .status { font-size: 13px; line-height: 1.6; color: var(--muted); }
+.status:empty { display: none; }
 .status::before {
   content: "";
   display: inline-block;
-  width: 7px;
-  height: 7px;
+  width: 6px;
+  height: 6px;
   margin-right: 7px;
   border-radius: 50%;
   background: var(--line);
@@ -111,9 +112,6 @@ textarea:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px;
 .status.working::before { background: var(--primary); animation: ob-blink 1s ease-in-out infinite; }
 @keyframes ob-blink { 50% { opacity: .3; } }
 
-.note { font-size: 12px; color: var(--muted); line-height: 1.7; }
-.hint { font-size: 12px; color: var(--muted); }
-
 /* ---------- 表单控件 ---------- */
 
 input[type="text"],
@@ -124,16 +122,15 @@ textarea {
   padding: 9px 11px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: #FBFCFE;
+  background: var(--surface);
   color: var(--ink);
-  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  transition: border-color .15s ease, box-shadow .15s ease;
 }
 input:hover, textarea:hover { border-color: #CBD2DE; }
 input:focus, textarea:focus {
   outline: none;
-  border-color: var(--primary);
-  background: #fff;
-  box-shadow: 0 0 0 3px rgba(46, 75, 216, .12);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(28, 37, 54, .08);
 }
 textarea {
   resize: vertical;
@@ -145,46 +142,44 @@ textarea {
 /* ---------- popup ---------- */
 
 body.popup {
-  width: 300px;
-  padding: 18px 16px 14px;
+  width: 280px;
+  padding: 16px 16px 12px;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 .popup .footer {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-top: 10px;
+  justify-content: flex-end;
+  padding-top: 8px;
   border-top: 1px solid var(--line);
 }
 
 /* ---------- options ---------- */
 
-body.options { padding: 32px 16px 96px; }
-.shell { max-width: 680px; margin: 0 auto; }
+body.options { padding: 40px 16px 96px; }
+.shell { max-width: 640px; margin: 0 auto; }
 .options-card {
-  margin-top: 20px;
-  padding: 4px 28px 24px;
+  margin-top: 24px;
+  padding: 4px 28px 8px;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 14px;
-  box-shadow: 0 1px 3px rgba(28, 37, 54, .05);
 }
 .options-card section {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding: 22px 0;
+  padding: 24px 0;
   border-bottom: 1px solid var(--line);
 }
-.options-card section:last-of-type { border-bottom: 0; }
+.options-card section:last-child { border-bottom: 0; }
 .eyebrow {
   margin: 0;
   font-size: 12px;
-  font-weight: 700;
-  letter-spacing: .12em;
-  color: var(--primary);
+  font-weight: 600;
+  letter-spacing: .18em;
+  color: var(--muted);
 }
 .field { display: flex; flex-direction: column; gap: 6px; }
 .field > span { font-size: 13px; color: var(--muted); }
@@ -203,13 +198,13 @@ body.options { padding: 32px 16px 96px; }
   border-top: 1px solid var(--line);
 }
 .save-bar-inner {
-  max-width: 680px;
+  max-width: 640px;
   margin: 0 auto;
   display: flex;
   align-items: center;
   gap: 12px;
 }
-.save-bar .primary { width: auto; padding: 10px 32px; }
+.save-bar .primary { width: auto; padding: 9px 32px; }
 
 @media (prefers-reduced-motion: reduce) {
   .brand-line span { animation: none; width: 100%; }
