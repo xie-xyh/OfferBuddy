@@ -64,9 +64,11 @@ function handleResult(resp) {
   }
 }
 
-/* 打开 popup 时先检查配置，缺什么提示什么 */
+/* 打开 popup 时先检查配置，缺什么提示什么（与 background.js 的读取逻辑一致：按厂商取 Key） */
 (async () => {
-  const cfg = await chrome.storage.local.get(['apiKey', 'resumeMd']);
-  if (!cfg.apiKey) setStatus('error', '尚未配置 API Key，请先打开设置');
+  const cfg = await chrome.storage.local.get(['provider', 'apiKeys', 'apiKey', 'resumeMd']);
+  const provider = cfg.provider || 'deepseek';
+  const apiKey = (cfg.apiKeys && cfg.apiKeys[provider]) || cfg.apiKey || '';
+  if (!apiKey) setStatus('error', '尚未配置 API Key，请先打开设置');
   else if (!cfg.resumeMd || !cfg.resumeMd.trim()) setStatus('error', '尚未填写简历，请先打开设置');
 })();
