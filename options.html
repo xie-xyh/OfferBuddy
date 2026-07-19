@@ -54,21 +54,30 @@
         </section>
 
         <section id="sec-resume" class="panel">
-          <header class="panel-head"><span class="panel-index">02</span><h2>简历</h2></header>
-          <div class="ta-wrap">
-            <textarea id="resume-md" rows="20" spellcheck="false" placeholder="Markdown 格式"></textarea>
-            <span class="ta-count" id="resume-count"></span>
+          <header class="panel-head">
+            <span class="panel-index">02</span><h2>简历</h2>
+            <button id="resume-toggle" type="button" class="secondary panel-action">编辑</button>
+          </header>
+          <div id="resume-view-wrap">
+            <div id="resume-view" class="md-view"></div>
+            <div id="resume-empty" class="resume-empty" hidden>暂无内容，点右上角「编辑」粘贴 Markdown，或「上传文件解析」导入</div>
           </div>
-          <div class="row">
-            <button id="upload-resume" type="button" class="secondary">上传文件解析</button>
-            <input id="resume-file" type="file" accept=".pdf,.docx,.md,.txt" hidden>
-            <span id="upload-status" class="status"></span>
-          </div>
-          <div class="import-bar" id="import-bar" hidden>
-            <span class="import-text" id="import-text"></span>
-            <button id="import-overwrite" type="button" class="secondary">覆盖现有</button>
-            <button id="import-append" type="button" class="secondary">追加到末尾</button>
-            <button id="import-cancel" type="button" class="link-btn">取消</button>
+          <div id="resume-edit" hidden>
+            <div class="ta-wrap">
+              <textarea id="resume-md" rows="20" spellcheck="false" placeholder="Markdown 格式"></textarea>
+              <span class="ta-count" id="resume-count"></span>
+            </div>
+            <div class="row">
+              <button id="upload-resume" type="button" class="secondary">上传文件解析</button>
+              <input id="resume-file" type="file" accept=".pdf,.docx,.md,.txt" hidden>
+              <span id="upload-status" class="status"></span>
+            </div>
+            <div class="import-bar" id="import-bar" hidden>
+              <span class="import-text" id="import-text"></span>
+              <button id="import-overwrite" type="button" class="secondary">覆盖现有</button>
+              <button id="import-append" type="button" class="secondary">追加到末尾</button>
+              <button id="import-cancel" type="button" class="link-btn">取消</button>
+            </div>
           </div>
         </section>
       </div>
@@ -102,6 +111,8 @@
 
   <script src="vendor/pdf.min.js"></script>
   <script src="vendor/mammoth.browser.min.js"></script>
+  <script src="vendor/marked.umd.js"></script>
+  <script src="vendor/purify.min.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

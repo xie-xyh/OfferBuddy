@@ -71,6 +71,7 @@ async function load() {
   $('resume-md').value = cfg.resumeMd || '';
   $('extra-instructions').value = cfg.extraInstructions || '';
   updateResumeCount();
+  setResumeMode(!$('resume-md').value.trim()); // 有简历 → 预览；无简历 → 直接编辑
   refreshOverview();
   $('ver').textContent = chrome.runtime.getManifest().version;
 }
@@ -290,6 +291,33 @@ const spy = new IntersectionObserver(entries => {
   });
 }, { rootMargin: '-25% 0px -65% 0px' });
 document.querySelectorAll('.panel[id^="sec-"]').forEach(p => spy.observe(p));
+
+/* ---------- 简历：预览 / 编辑双模式 ---------- */
+
+let resumeEditing = false;
+
+/* 用 marked 渲染 + DOMPurify 消毒，简历内容只来自用户本机 */
+function renderResumeView() {
+  const md = $('resume-md').value.trim();
+  if (md) {
+    $('resume-view').innerHTML = DOMPurify.sanitize(marked.parse(md, { breaks: true }));
+    $('resume-view').hidden = false;
+    $('resume-empty').hidden = true;
+  } else {
+    $('resume-view').hidden = true;
+    $('resume-empty').hidden = false;
+  }
+}
+
+function setResumeMode(editing) {
+  resumeEditing = editing;
+  $('resume-edit').hidden = !editing;
+  $('resume-view-wrap').hidden = editing;
+  $('resume-toggle').textContent = editing ? '完成' : '编辑';
+  if (!editing) renderResumeView();
+}
+
+$('resume-toggle').addEventListener('click', () => setResumeMode(!resumeEditing));
 
 /* ---------- 简历字数 ---------- */
 

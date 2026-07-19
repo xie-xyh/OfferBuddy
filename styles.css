@@ -375,6 +375,79 @@ body.options { min-height: 100vh; }
 .import-bar[hidden] { display: none; }
 .import-text { flex: 1; font-size: 13px; color: var(--ink); }
 
+/* 简历预览/编辑切换 */
+.panel-action {
+  margin-left: auto;
+  padding: 5px 14px;
+  font-size: 12px;
+}
+#resume-edit { display: flex; flex-direction: column; gap: 12px; }
+#resume-edit[hidden], #resume-view-wrap[hidden] { display: none; }
+
+/* Markdown 渲染视图：固定高度、内部滚动 */
+.md-view {
+  height: 460px;
+  overflow-y: auto;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #FAFBFD;
+  font-size: 13.5px;
+  line-height: 1.7;
+  word-break: break-word;
+}
+.md-view > :first-child { margin-top: 0; }
+.md-view > :last-child { margin-bottom: 0; }
+.md-view h1 { font-size: 19px; font-weight: 700; margin: 4px 0 10px; }
+.md-view h2 {
+  font-size: 15px;
+  font-weight: 650;
+  margin: 18px 0 8px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid var(--line);
+}
+.md-view h3 { font-size: 13.5px; font-weight: 650; margin: 12px 0 4px; }
+.md-view h4 { font-size: 13px; font-weight: 600; margin: 10px 0 4px; color: var(--muted); }
+.md-view p { margin: 6px 0; }
+.md-view ul, .md-view ol { margin: 6px 0; padding-left: 22px; }
+.md-view li { margin: 3px 0; }
+.md-view li::marker { color: var(--jade); }
+.md-view strong { font-weight: 650; }
+.md-view hr { border: 0; border-top: 1px dashed var(--line-strong); margin: 14px 0; }
+.md-view code {
+  font-family: var(--mono);
+  font-size: 12px;
+  background: #EEF1F6;
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+.md-view a { color: var(--primary); text-decoration: none; }
+.md-view a:hover { text-decoration: underline; }
+.md-view blockquote {
+  margin: 8px 0;
+  padding: 2px 12px;
+  border-left: 3px solid var(--line-strong);
+  color: var(--muted);
+}
+.md-view table { border-collapse: collapse; margin: 8px 0; font-size: 13px; }
+.md-view th, .md-view td { border: 1px solid var(--line); padding: 5px 10px; }
+.md-view th { background: #EEF1F6; }
+
+.resume-empty {
+  height: 460px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  border: 1px dashed var(--line-strong);
+  border-radius: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+  line-height: 1.8;
+}
+.resume-empty[hidden] { display: none; }
+
 /* 概览卡 */
 .overview { padding: 22px 24px; }
 .overview .panel-head { margin-bottom: 14px; }
