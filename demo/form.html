@@ -2,7 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>模拟招聘表单 — AI 简历自动填写演示</title>
+  <title>模拟招聘表单 — OfferBuddy 演示</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -15,6 +15,7 @@
       border-radius: 10px; padding: 28px; box-shadow: 0 2px 8px rgba(0,0,0,.06);
     }
     h1 { font-size: 20px; margin: 0 0 4px; }
+    h2 { font-size: 15px; margin: 24px 0 12px; padding-top: 16px; border-top: 1px solid #eee; }
     .sub { color: #667085; font-size: 13px; margin: 0 0 20px; }
     .item { margin-bottom: 16px; }
     .item > label, .item > .label { display: block; font-size: 13px; color: #475467; margin-bottom: 6px; }
@@ -27,6 +28,8 @@
     .radio-row, .check-row { display: flex; gap: 16px; align-items: center; font-size: 14px; }
     .required::after { content: " *"; color: #dc2626; }
     button { padding: 10px 24px; font: inherit; color: #fff; background: #2563eb; border: 0; border-radius: 6px; cursor: pointer; }
+    .add-btn { padding: 8px 14px; background: #fff; color: #2563eb; border: 1px dashed #2563eb; }
+    .edu-group { padding: 12px; border: 1px solid #eaecf0; border-radius: 8px; margin-bottom: 12px; }
     .tip { font-size: 12px; color: #98a2b3; margin-top: 4px; }
   </style>
 </head>
@@ -52,8 +55,29 @@
     </div>
 
     <div class="item">
+      <label for="age">年龄</label>
+      <input id="age" name="age" type="number" min="16" max="70" placeholder="周岁">
+    </div>
+
+    <div class="item">
       <label for="birthday">出生日期</label>
       <input id="birthday" name="birthday" type="date">
+    </div>
+
+    <div class="item">
+      <label for="grad-year">毕业年份</label>
+      <select id="grad-year" name="grad-year">
+        <option value="">请选择</option>
+        <option>2017 年</option>
+        <option>2018 年</option>
+        <option>2019 年</option>
+        <option>2020 年</option>
+        <option>2021 年</option>
+        <option>2022 年</option>
+        <option>2023 年</option>
+        <option>2024 年</option>
+        <option>2025 年</option>
+      </select>
     </div>
 
     <div class="item">
@@ -79,6 +103,24 @@
       </select>
     </div>
 
+    <h2>教育经历</h2>
+    <div id="edu-list">
+      <div class="edu-group">
+        <div class="item">
+          <label>学校名称</label>
+          <input type="text" name="edu-school">
+        </div>
+        <div class="item">
+          <label>专业</label>
+          <input type="text" name="edu-major">
+        </div>
+      </div>
+    </div>
+    <div class="item">
+      <button type="button" class="add-btn" id="add-edu">＋ 添加教育经历</button>
+      <p class="tip">演示「添加条目」能力：如果你的简历有两段教育经历，插件应先自动点这里再加一组，然后分别填写。</p>
+    </div>
+
     <div class="item">
       <label for="city">期望工作城市</label>
       <input id="city" name="city" type="text" placeholder="例如：杭州">
@@ -97,6 +139,11 @@
         <label><input type="radio" name="status" value="left"> 已离职</label>
         <label><input type="radio" name="status" value="student"> 在读</label>
       </div>
+    </div>
+
+    <div class="item">
+      <label for="work-exp">最近一段工作经历描述</label>
+      <textarea id="work-exp" name="work-exp" rows="6" placeholder="请描述你最近一段工作经历（此字段用于验证：插件应使用简历原文，不做压缩总结）"></textarea>
     </div>
 
     <div class="item">
@@ -123,6 +170,14 @@
   setInterval(() => {
     if (cityInput.value !== cityState.value) cityInput.value = cityState.value;
   }, 1500);
+
+  /* 「添加教育经历」：克隆一组空字段（模拟招聘站的条目添加交互） */
+  document.getElementById('add-edu').addEventListener('click', () => {
+    const list = document.getElementById('edu-list');
+    const clone = list.lastElementChild.cloneNode(true);
+    clone.querySelectorAll('input').forEach(i => { i.value = ''; });
+    list.appendChild(clone);
+  });
 </script>
 </body>
 </html>

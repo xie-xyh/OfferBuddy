@@ -1,14 +1,25 @@
-/* AI 简历自动填写 — 内容脚本
+/* OfferBuddy — 内容脚本
    由 popup 通过 chrome.scripting.executeScript 按需注入：
-   识别页面表单字段 → 请 background 调大模型 → 回填并高亮。
+   识别字段 → 规划并点击「添加条目」→ 调大模型 → 逐个可见地回填（滚动跟随 + 动画高亮）。
    兼容 React/Vue 受控组件：原生 setter 设值 + 派发 input/change 事件。 */
 
 (() => {
-  if (window.__resumeFillerLoaded) return;
-  window.__resumeFillerLoaded = true;
+  if (window.__offerBuddyLoaded) return;
+  window.__offerBuddyLoaded = true;
 
-  const MAX_FIELDS = 80;
+  const MAX_FIELDS = 120;
+  const MAX_SECTIONS = 6;
+  const MAX_CLICKS_PER_SECTION = 4;
+  const FILL_DELAY_MS = 160;
+  const CLICK_WAIT_MS = 500;
   const SKIP_INPUT_TYPES = new Set(['hidden', 'submit', 'button', 'image', 'reset', 'file', 'password']);
+  const ADD_BUTTON_RE = /(添加|新增|增加)\s*(一段|一条|一项|个)?\s*(教育|学历|工作|实习|实践|项目|经历|经验|履历|证书|语言)|^\s*\+\s*(添加|新增)/;
+
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const norm = s => (s || '').trim().toLowerCase();
+  const digitsOf = s => (String(s).match(/\d+/g) || []).join('');
+
+  /* ---------- 字段识别 ---------- */
 
   function isVisible(el) {
     const style = getComputedStyle(el);
@@ -22,12 +33,10 @@
   }
 
   function getLabel(el) {
-    // 1. 关联的 <label for> / 包裹 label（el.labels 两者都覆盖）
     if (el.labels && el.labels.length) {
       const t = [...el.labels].map(textOf).filter(Boolean).join(' ');
       if (t) return t;
     }
-    // 2. aria
     const aria = el.getAttribute('aria-label');
     if (aria && aria.trim()) return aria.trim();
     const labelledBy = el.getAttribute('aria-labelledby');
@@ -37,14 +46,14 @@
         .filter(Boolean).join(' ');
       if (t) return t;
     }
-    // 3. 前一个兄弟元素的文本
+    const wrap = el.closest('label');
+    if (wrap && textOf(wrap)) return textOf(wrap);
     let sib = el.previousElementSibling;
     while (sib) {
       const t = textOf(sib);
       if (t) return t;
       sib = sib.previousElementSibling;
     }
-    // 4. 父元素自身文本 / 父元素的前一个兄弟
     const parent = el.parentElement;
     if (parent) {
       const own = [...parent.childNodes]
@@ -88,6 +97,56 @@
     return { els, fields };
   }
 
+  /* ---------- 页面上的状态徽标（填写过程可视化） ---------- */
+
+  let badgeEl = null;
+
+  function ensureBadge() {
+    if (badgeEl && badgeEl.isConnected) return badgeEl;
+    if (!document.getElementById('ob-style')) {
+      const style = document.createElement('style');
+      style.id = 'ob-style';
+      style.textContent = `
+        @keyframes ob-pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(46,75,216,.45); } 50% { box-shadow: 0 0 0 7px rgba(46,75,216,0); } }
+        @keyframes ob-spin { to { transform: rotate(360deg); } }
+        .ob-filling { outline: 2px solid #2E4BD8 !important; outline-offset: 1px; animation: ob-pulse 1s ease-in-out infinite; }
+        .ob-filled { outline: 2px solid #0E8A66 !important; outline-offset: 1px; }
+        @media (prefers-reduced-motion: reduce) { .ob-filling { animation: none; } }
+      `;
+      document.documentElement.appendChild(style);
+    }
+    badgeEl = document.createElement('div');
+    badgeEl.style.cssText = [
+      'position:fixed', 'top:16px', 'right:16px', 'z-index:2147483647',
+      'background:#1C2536', 'color:#fff', 'padding:10px 14px', 'border-radius:10px',
+      'font:13px/1.5 -apple-system,"PingFang SC","Microsoft YaHei",sans-serif',
+      'box-shadow:0 6px 20px rgba(0,0,0,.28)', 'max-width:320px',
+      'display:flex', 'align-items:center', 'gap:8px', 'transition:opacity .35s',
+    ].join(';');
+    document.documentElement.appendChild(badgeEl);
+    return badgeEl;
+  }
+
+  function setBadge(text, mode = 'working') {
+    const badge = ensureBadge();
+    badge.style.opacity = '1';
+    const icon = document.createElement('span');
+    if (mode === 'working') {
+      icon.style.cssText = 'width:12px;height:12px;flex:none;border:2px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:ob-spin .7s linear infinite';
+    } else {
+      icon.style.cssText = `width:8px;height:8px;flex:none;border-radius:50%;background:${mode === 'error' ? '#f87171' : '#34d399'}`;
+    }
+    const label = document.createElement('span');
+    label.textContent = `OfferBuddy · ${text}`;
+    badge.replaceChildren(icon, label);
+  }
+
+  function hideBadge() {
+    if (badgeEl) badgeEl.style.opacity = '0';
+  }
+
+  /* ---------- 回填 ---------- */
+
   /* React/Vue 受控组件必须用原生 setter，否则框架 state 会覆盖填进去的值 */
   function setNativeValue(el, value) {
     const proto = el.tagName === 'TEXTAREA' ? HTMLTextAreaElement.prototype
@@ -100,21 +159,27 @@
     el.dispatchEvent(new Event('change', { bubbles: true }));
   }
 
-  const norm = s => (s || '').trim().toLowerCase();
-
+  /* select 匹配：精确 → 包含 → 数字（年龄/年限/年份等） */
   function fillSelect(el, value) {
     const v = norm(value);
-    const opts = [...el.options];
+    const opts = [...el.options].filter(o => !o.disabled && norm(o.text) && !/^(请选择|请选择一项|select)/.test(norm(o.text)));
     let match = opts.find(o => norm(o.text) === v || norm(o.value) === v);
     if (!match) {
       match = opts.find(o => {
         const t = norm(o.text);
-        return t && (t.includes(v) || v.includes(t));
+        return t.includes(v) || v.includes(t);
       });
+    }
+    if (!match) {
+      const vd = digitsOf(value);
+      if (vd) {
+        match = opts.find(o => digitsOf(o.text) === vd)
+          || opts.find(o => norm(o.text).startsWith(String(parseInt(vd, 10))));
+      }
     }
     if (!match) return false;
     setNativeValue(el, match.value);
-    return true;
+    return el.value === match.value;
   }
 
   function fillCheckable(el, value) {
@@ -127,55 +192,148 @@
     return true;
   }
 
-  function highlight(el) {
-    el.style.outline = '2px solid #16a34a';
-    el.style.outlineOffset = '1px';
+  /* 兼容 "1995年6月"、"1995/6/3"、"1995-06" 等写法 → 浏览器要求的格式 */
+  function normalizeDateValue(value, type) {
+    const m = String(value).match(/(\d{4})\s*[年\/.\-]\s*(\d{1,2})\s*(?:[月\/.\-]\s*(\d{1,2})\s*日?)?/);
+    if (!m) return null;
+    const y = m[1];
+    const mo = m[2].padStart(2, '0');
+    if (type === 'month') return `${y}-${mo}`;
+    const d = (m[3] || '1').padStart(2, '0');
+    return `${y}-${mo}-${d}`;
   }
 
   function fillOne(el, field, rawValue) {
     const value = String(rawValue).trim();
     if (!value) return false;
-    if (field.type === 'radio' || field.type === 'checkbox') {
-      const ok = fillCheckable(el, value);
-      if (ok) highlight(el);
-      return ok;
-    }
-    if (el.tagName === 'SELECT') {
-      const ok = fillSelect(el, value);
-      if (ok) highlight(el);
-      return ok;
-    }
+    if (field.type === 'radio' || field.type === 'checkbox') return fillCheckable(el, value);
+    if (el.tagName === 'SELECT') return fillSelect(el, value);
     let v = value;
-    if (field.type === 'number') v = value.replace(/[^\d.\-]/g, '');
+    if (field.type === 'number') {
+      v = (String(value).match(/-?\d+(\.\d+)?/) || [''])[0]; // "28岁" → "28"
+    } else if (field.type === 'date' || field.type === 'month') {
+      v = normalizeDateValue(value, field.type)
+        || (/^\d{4}-\d{2}(-\d{2})?$/.test(value) ? value : null);
+    }
     if (!v) return false;
     setNativeValue(el, v);
-    if (!el.value) return false; // 值被浏览器拒绝（如 date 格式不对）
-    highlight(el);
-    return true;
+    return !!el.value; // 值被浏览器拒绝（格式仍不合法）则视为未填
   }
 
-  async function startFill() {
-    const { els, fields } = collectFields();
-    if (!fields.length) return { ok: false, error: 'NO_FIELDS' };
+  /* ---------- 「添加条目」检测与规划 ---------- */
 
+  function findAddableSections(fields, els) {
+    const buttons = [...document.querySelectorAll('button, a, [role="button"], input[type="button"]')]
+      .filter(el => isVisible(el) && !el.disabled)
+      .filter(el => ADD_BUTTON_RE.test(textOf(el) || el.value || ''));
+
+    const seen = new Set();
+    const sections = [];
+    for (const btn of buttons) {
+      // 向上找「同时包含按钮和至少一个已采集字段」的最近容器
+      let container = btn.parentElement;
+      let depth = 0;
+      while (container && depth < 6 && !els.some(f => container.contains(f))) {
+        container = container.parentElement;
+        depth++;
+      }
+      if (!container || seen.has(container)) continue;
+      seen.add(container);
+      const memberLabels = fields
+        .filter((f, j) => container.contains(els[j]))
+        .map(f => f.label || f.name || f.placeholder)
+        .filter(Boolean)
+        .slice(0, 12);
+      if (memberLabels.length < 1) continue;
+      sections.push({
+        section: `s${sections.length}`,
+        buttonText: (textOf(btn) || btn.value || '').slice(0, 30),
+        currentFields: memberLabels,
+        _btn: btn,
+      });
+      if (sections.length >= MAX_SECTIONS) break;
+    }
+    return sections;
+  }
+
+  /* ---------- 主流程 ---------- */
+
+  async function startFill() {
+    let { els, fields } = collectFields();
+    if (!fields.length) return { ok: false, error: 'NO_FIELDS' };
+    setBadge(`识别到 ${fields.length} 个字段`);
+
+    /* 1) 检测「添加条目」按钮，让大模型判断需要补几段经历 */
+    const sections = findAddableSections(fields, els);
+    if (sections.length) {
+      setBadge('正在规划经历条目数量…');
+      const plan = await chrome.runtime.sendMessage({
+        type: 'PLAN_ENTRIES',
+        url: location.href,
+        title: document.title,
+        sections: sections.map(({ section, buttonText, currentFields }) => ({ section, buttonText, currentFields })),
+      });
+      if (plan?.ok && plan.addClicks) {
+        let added = false;
+        for (const s of sections) {
+          const clicks = Math.min(MAX_CLICKS_PER_SECTION, Math.max(0, parseInt(plan.addClicks[s.section], 10) || 0));
+          for (let c = 0; c < clicks; c++) {
+            setBadge(`添加条目：${s.buttonText}`);
+            s._btn.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            await sleep(300);
+            s._btn.click();
+            added = true;
+            await sleep(CLICK_WAIT_MS);
+          }
+        }
+        if (added) ({ els, fields } = collectFields()); // 重新识别新出现的字段
+      }
+    }
+
+    /* 2) 大模型生成填写值 */
+    setBadge(`大模型生成中（${fields.length} 个字段）…`);
     const resp = await chrome.runtime.sendMessage({
       type: 'GENERATE_FILL',
       url: location.href,
       title: document.title,
       fields,
     });
-    if (!resp || !resp.ok) return resp || { ok: false, error: 'NO_RESPONSE' };
+    if (!resp || !resp.ok) {
+      setBadge('生成失败，请查看插件弹窗提示', 'error');
+      setTimeout(hideBadge, 5000);
+      return resp || { ok: false, error: 'NO_RESPONSE' };
+    }
 
+    /* 3) 逐个可见地回填：滚动到字段 → 蓝色脉冲 → 填入 → 绿色描边 */
     const values = resp.values || {};
     let filled = 0;
     const skipped = [];
-    fields.forEach((field, i) => {
+    for (let i = 0; i < fields.length; i++) {
+      const field = fields[i];
       const raw = values[String(field.index)];
-      if (raw == null || String(raw).trim() === '') return; // 大模型主动留空
-      const ok = fillOne(els[i], field, raw);
-      if (ok) filled += 1;
-      else skipped.push(field.label || field.name || field.placeholder || `#${field.index}`);
-    });
+      if (raw == null || String(raw).trim() === '') continue; // 大模型主动留空
+      const el = els[i];
+      const label = field.label || field.name || field.placeholder || `字段 ${field.index}`;
+      if (!el.isConnected) { skipped.push(label); continue; }
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.remove('ob-filled');
+      el.classList.add('ob-filling');
+      setBadge(`填写中 ${filled + 1} · ${label}`);
+      await sleep(FILL_DELAY_MS);
+      const ok = fillOne(el, field, raw);
+      if (ok) {
+        filled++;
+        el.classList.remove('ob-filling');
+        el.classList.add('ob-filled');
+      } else {
+        el.classList.remove('ob-filling');
+        skipped.push(label);
+      }
+      await sleep(60);
+    }
+
+    setBadge(`完成：已填写 ${filled}/${fields.length} 项，请核对后手动提交`, 'done');
+    setTimeout(hideBadge, 8000);
     return { ok: true, filled, total: fields.length, skipped };
   }
 
@@ -183,7 +341,11 @@
     if (msg?.type !== 'RESUME_FILL_START') return undefined;
     startFill()
       .then(sendResponse)
-      .catch(err => sendResponse({ ok: false, error: 'FILL_FAILED', detail: String(err?.message || err) }));
+      .catch(err => {
+        setBadge('出现异常，已中断', 'error');
+        setTimeout(hideBadge, 5000);
+        sendResponse({ ok: false, error: 'FILL_FAILED', detail: String(err?.message || err) });
+      });
     return true; // 异步响应
   });
 })();

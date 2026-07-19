@@ -2,58 +2,68 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
-  <title>AI 简历自动填写 — 设置</title>
+  <title>OfferBuddy — 设置</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body class="options">
-  <main class="options-card">
-    <h1>设置</h1>
+  <div class="shell">
+    <header class="brand">
+      <div class="wordmark">OfferBuddy<span class="dot">.</span></div>
+      <div class="brand-line"><span></span></div>
+      <p class="tagline">设置 · 三步完成，之后一键填写</p>
+    </header>
 
-    <section>
-      <h2>DeepSeek API</h2>
-      <label class="field">
-        <span>API Key</span>
-        <div class="key-row">
-          <input id="api-key" type="password" placeholder="sk-..." autocomplete="off">
-          <button id="toggle-key" type="button" class="secondary">显示</button>
+    <main class="options-card">
+      <section>
+        <p class="eyebrow">01 · API 接入</p>
+        <label class="field">
+          <span>API Key</span>
+          <div class="key-row">
+            <input id="api-key" type="password" placeholder="sk-..." autocomplete="off">
+            <button id="toggle-key" type="button" class="secondary">显示</button>
+          </div>
+        </label>
+        <label class="field">
+          <span>Base URL</span>
+          <input id="base-url" type="text" placeholder="https://api.deepseek.com">
+        </label>
+        <label class="field">
+          <span>模型</span>
+          <input id="model" type="text" placeholder="deepseek-chat">
+        </label>
+        <div class="row">
+          <button id="test" type="button" class="secondary">测试连接</button>
+          <span id="test-status" class="status"></span>
         </div>
-      </label>
-      <label class="field">
-        <span>Base URL</span>
-        <input id="base-url" type="text" placeholder="https://api.deepseek.com">
-      </label>
-      <label class="field">
-        <span>模型</span>
-        <input id="model" type="text" placeholder="deepseek-chat">
-      </label>
-      <div class="row">
-        <button id="test" type="button" class="secondary">测试连接</button>
-        <span id="test-status" class="status"></span>
-      </div>
-    </section>
+      </section>
 
-    <section>
-      <h2>我的简历（Markdown）</h2>
-      <textarea id="resume-md" rows="16" spellcheck="false"
-        placeholder="# 张三&#10;&#10;- 电话：138-xxxx-xxxx&#10;- 邮箱：zhangsan@example.com&#10;- 工作年限：5 年&#10;&#10;## 工作经历&#10;..."></textarea>
-    </section>
+      <section>
+        <p class="eyebrow">02 · 我的简历</p>
+        <textarea id="resume-md" rows="16" spellcheck="false"
+          placeholder="# 张三&#10;&#10;- 电话：138-xxxx-xxxx&#10;- 邮箱：zhangsan@example.com&#10;- 工作年限：5 年&#10;&#10;## 工作经历&#10;..."></textarea>
+        <p class="hint">支持 Markdown。项目/工作/教育等长经历在填写时按原文填入，不会被压缩改写。</p>
+      </section>
 
-    <section>
-      <h2>附加填写指令（可选）</h2>
-      <textarea id="extra-instructions" rows="3" spellcheck="false"
-        placeholder="例如：期望薪资一律填「面议」；自我介绍保持中文；求职意向优先后端开发"></textarea>
-    </section>
+      <section>
+        <p class="eyebrow">03 · 填写偏好（可选）</p>
+        <textarea id="extra-instructions" rows="3" spellcheck="false"
+          placeholder="例如：期望薪资一律填「面议」；自我介绍保持中文；求职意向优先后端开发"></textarea>
+      </section>
 
-    <div class="actions">
-      <button id="save" type="button" class="primary">保存</button>
+      <p class="note">
+        所有配置仅保存在本机浏览器（chrome.storage.local），不会上传到任何服务器；
+        点击「自动填写」时，简历与页面字段会发送给你配置的 API 地址（默认 DeepSeek），属预期行为。
+      </p>
+    </main>
+  </div>
+
+  <div class="save-bar">
+    <div class="save-bar-inner">
+      <button id="save" type="button" class="primary">保存设置</button>
       <span id="save-status" class="status"></span>
     </div>
+  </div>
 
-    <p class="note">
-      所有配置仅保存在本机浏览器（chrome.storage.local），不会上传到任何服务器；
-      点击「自动填写」时，简历与页面字段会发送给你配置的 API 地址（默认 DeepSeek），属预期行为。
-    </p>
-  </main>
   <script src="options.js"></script>
 </body>
 </html>
