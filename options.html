@@ -21,59 +21,76 @@
   </aside>
 
   <main class="content">
-    <section id="sec-api" class="panel">
-      <header class="panel-head"><span class="panel-index">01</span><h2>API</h2></header>
-      <div id="provider-grid" class="provider-grid"></div>
-      <div class="fields">
-        <label class="field">
-          <span>Key</span>
-          <div class="key-row">
-            <input id="api-key" type="password" placeholder="sk-..." autocomplete="off">
-            <button id="toggle-key" type="button" class="secondary">显示</button>
+    <div class="content-inner">
+      <div class="col-main">
+        <section id="sec-api" class="panel">
+          <header class="panel-head"><span class="panel-index">01</span><h2>API</h2></header>
+          <div id="provider-grid" class="provider-grid"></div>
+          <div class="fields">
+            <label class="field">
+              <span>Key</span>
+              <div class="key-row">
+                <input id="api-key" type="password" placeholder="sk-..." autocomplete="off">
+                <button id="toggle-key" type="button" class="secondary">显示</button>
+              </div>
+              <span class="hint">仅存本机，按厂商分开保存</span>
+            </label>
+            <div class="field-duo">
+              <label class="field">
+                <span>Base URL</span>
+                <input id="base-url" type="text">
+              </label>
+              <label class="field">
+                <span>模型</span>
+                <select id="model"></select>
+                <input id="model-custom" type="text" placeholder="输入模型名" style="display:none">
+              </label>
+            </div>
+            <div class="row">
+              <button id="test" type="button" class="secondary">测试连接</button>
+              <span id="test-status" class="status"></span>
+            </div>
           </div>
-          <span class="hint">仅存本机，按厂商分开保存</span>
-        </label>
-        <div class="field-duo">
-          <label class="field">
-            <span>Base URL</span>
-            <input id="base-url" type="text">
-          </label>
-          <label class="field">
-            <span>模型</span>
-            <select id="model"></select>
-            <input id="model-custom" type="text" placeholder="输入模型名" style="display:none">
-          </label>
-        </div>
-        <div class="row">
-          <button id="test" type="button" class="secondary">测试连接</button>
-          <span id="test-status" class="status"></span>
-        </div>
-      </div>
-    </section>
+        </section>
 
-    <section id="sec-resume" class="panel">
-      <header class="panel-head"><span class="panel-index">02</span><h2>简历</h2></header>
-      <div class="ta-wrap">
-        <textarea id="resume-md" rows="18" spellcheck="false" placeholder="Markdown 格式"></textarea>
-        <span class="ta-count" id="resume-count"></span>
+        <section id="sec-resume" class="panel">
+          <header class="panel-head"><span class="panel-index">02</span><h2>简历</h2></header>
+          <div class="ta-wrap">
+            <textarea id="resume-md" rows="20" spellcheck="false" placeholder="Markdown 格式"></textarea>
+            <span class="ta-count" id="resume-count"></span>
+          </div>
+          <div class="row">
+            <button id="upload-resume" type="button" class="secondary">上传文件解析</button>
+            <input id="resume-file" type="file" accept=".pdf,.docx,.md,.txt" hidden>
+            <span id="upload-status" class="status"></span>
+          </div>
+          <div class="import-bar" id="import-bar" hidden>
+            <span class="import-text" id="import-text"></span>
+            <button id="import-overwrite" type="button" class="secondary">覆盖现有</button>
+            <button id="import-append" type="button" class="secondary">追加到末尾</button>
+            <button id="import-cancel" type="button" class="link-btn">取消</button>
+          </div>
+        </section>
       </div>
-      <div class="row">
-        <button id="upload-resume" type="button" class="secondary">上传文件解析</button>
-        <input id="resume-file" type="file" accept=".pdf,.docx,.md,.txt" hidden>
-        <span id="upload-status" class="status"></span>
-      </div>
-      <div class="import-bar" id="import-bar" hidden>
-        <span class="import-text" id="import-text"></span>
-        <button id="import-overwrite" type="button" class="secondary">覆盖现有</button>
-        <button id="import-append" type="button" class="secondary">追加到末尾</button>
-        <button id="import-cancel" type="button" class="link-btn">取消</button>
-      </div>
-    </section>
 
-    <section id="sec-pref" class="panel">
-      <header class="panel-head"><span class="panel-index">03</span><h2>填写偏好</h2></header>
-      <textarea id="extra-instructions" rows="2" spellcheck="false" placeholder="可选，如：期望薪资填「面议」"></textarea>
-    </section>
+      <div class="col-side">
+        <aside class="panel overview">
+          <header class="panel-head"><h2>概览</h2></header>
+          <dl class="ov-list">
+            <div class="ov-row"><dt>厂商</dt><dd id="ov-provider">—</dd></div>
+            <div class="ov-row"><dt>模型</dt><dd id="ov-model">—</dd></div>
+            <div class="ov-row"><dt>Key</dt><dd id="ov-key">—</dd></div>
+            <div class="ov-row"><dt>简历</dt><dd id="ov-resume">—</dd></div>
+          </dl>
+          <div class="ov-bar"><span id="ov-bar-fill"></span></div>
+        </aside>
+
+        <section id="sec-pref" class="panel">
+          <header class="panel-head"><span class="panel-index">03</span><h2>填写偏好</h2></header>
+          <textarea id="extra-instructions" rows="4" spellcheck="false" placeholder="可选，如：期望薪资填「面议」"></textarea>
+        </section>
+      </div>
+    </div>
   </main>
 
   <div class="save-bar">

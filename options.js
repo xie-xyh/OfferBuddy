@@ -71,6 +71,7 @@ async function load() {
   $('resume-md').value = cfg.resumeMd || '';
   $('extra-instructions').value = cfg.extraInstructions || '';
   updateResumeCount();
+  refreshOverview();
   $('ver').textContent = chrome.runtime.getManifest().version;
 }
 
@@ -98,6 +99,7 @@ function renderProviders(activeId) {
       currentProvider = id;
       applyProvider(id);
       grid.querySelectorAll('.provider-card').forEach(c => c.classList.toggle('selected', c === card));
+      refreshOverview();
     });
     return card;
   }));
@@ -144,6 +146,33 @@ function currentModel() {
   return el.value.trim();
 }
 
+/* ---------- 概览卡 ---------- */
+
+function setOv(id, text, ok) {
+  const el = $(id);
+  el.textContent = text;
+  el.classList.toggle('ok', ok === true);
+  el.classList.toggle('warn', ok === false);
+}
+
+function refreshOverview() {
+  const p = PROVIDERS[currentProvider] || PROVIDERS.deepseek;
+  setOv('ov-provider', p.name);
+  setOv('ov-model', currentModel() || '—');
+  const hasKey = !!$('api-key').value.trim();
+  setOv('ov-key', hasKey ? '已配置' : '未配置', hasKey);
+  const resumeLen = $('resume-md').value.trim().length;
+  setOv('ov-resume', resumeLen ? `${resumeLen} 字` : '未填写', resumeLen > 0);
+
+  const parts = [hasKey, !!currentModel(), !!$('base-url').value.trim(), resumeLen > 0];
+  const pct = Math.round(parts.filter(Boolean).length / parts.length * 100);
+  $('ov-bar-fill').style.width = `${pct}%`;
+}
+
+['api-key', 'base-url', 'model', 'model-custom', 'resume-md'].forEach(id => {
+  $(id).addEventListener('input', refreshOverview);
+});
+
 /* ---------- 保存 ---------- */
 
 /* 非官方地址需要运行时主机权限才能 fetch */
@@ -183,6 +212,7 @@ $('save').addEventListener('click', async () => {
   $('save-status').className = 'status success';
   $('save-status').textContent = '已保存 ✓';
   setTimeout(() => { $('save-status').textContent = ''; }, 2000);
+  refreshOverview();
 });
 
 /* ---------- Key 显示 / 测试连接 ---------- */
@@ -259,7 +289,7 @@ const spy = new IntersectionObserver(entries => {
     }
   });
 }, { rootMargin: '-25% 0px -65% 0px' });
-document.querySelectorAll('.panel').forEach(p => spy.observe(p));
+document.querySelectorAll('.panel[id^="sec-"]').forEach(p => spy.observe(p));
 
 /* ---------- 简历字数 ---------- */
 
@@ -322,6 +352,7 @@ function applyImport(mode) {
   pendingResumeMd = null;
   hideImportBar();
   updateResumeCount();
+  refreshOverview();
   setUploadStatus('success', '已导入，确认无误后点保存');
 }
 
