@@ -12,7 +12,7 @@
   </p>
   <p>
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome MV3" />
-    <img src="https://img.shields.io/badge/version-0.3.0-0E8A66" alt="version" />
+    <img src="https://img.shields.io/badge/version-0.4.0-0E8A66" alt="version" />
     <img src="https://img.shields.io/badge/license-MIT-blue" alt="license" />
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
   </p>
@@ -25,6 +25,7 @@
 - **⚡ 一键填写** — 在招聘页面点一下，自动识别表单字段并调用大模型填写，全程只需几秒
 - **👀 过程全程可见** — 页面右上角实时进度徽标；自动滚动跟随：蓝色脉冲 = 正在填，绿色描边 = 已填好
 - **📄 经历用原文** — 项目/工作/教育等长经历逐字使用简历原文，不压缩、不概括、不改写
+- **📥 上传简历解析** — 支持 PDF / DOCX / MD / TXT，本地提取文本（文件不离开本机），AI 整理为 Markdown；内容为空直接导入，非空可选覆盖 / 追加 / 取消
 - **🧩 添加多条经历** — 识别「＋ 添加教育/工作/项目经历」按钮，按简历段数自动补齐条目再填写
 - **🎯 选择类字段精准匹配** — 下拉框精确/包含/数字三级匹配（年龄、年限、毕业年份）；日期兼容「1995年6月」等中文写法
 - **⚛️ 框架兼容** — 原生 setter + `input`/`change` 事件写值，React/Vue 受控组件不会被框架刷掉
@@ -50,7 +51,7 @@ git clone git@github.com:xie-xyh/OfferBuddy.git
 | **厂商** | 卡片选择，自动填充 Base URL 与模型候选 |
 | **Key** | 对应厂商的 API Key，仅存本机 `chrome.storage.local`，按厂商分开保存 |
 | **模型** | 下拉选择，选「自定义」厂商时可自由输入 |
-| **简历** | 粘贴完整 Markdown 简历 |
+| **简历** | 粘贴完整 Markdown 简历；或点「上传文件解析」导入 PDF / DOCX / MD / TXT |
 | **填写偏好** | 可选，如「期望薪资一律填面议」 |
 
 ### 3. 使用
@@ -129,6 +130,7 @@ OfferBuddy/
 ├── popup.html / .js     # 弹窗：触发填写、展示结果
 ├── options.html / .js   # 设置页：厂商 / Key / 模型 / 简历 / 偏好
 ├── styles.css           # popup 与设置页样式
+├── vendor/              # 本地解析库（pdf.js / mammoth，用于上传简历）
 ├── assets/              # 图标
 └── demo/form.html       # 本地模拟招聘表单（含受控组件与添加条目模拟）
 ```

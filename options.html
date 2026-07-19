@@ -57,6 +57,17 @@
         <textarea id="resume-md" rows="18" spellcheck="false" placeholder="Markdown 格式"></textarea>
         <span class="ta-count" id="resume-count"></span>
       </div>
+      <div class="row">
+        <button id="upload-resume" type="button" class="secondary">上传文件解析</button>
+        <input id="resume-file" type="file" accept=".pdf,.docx,.md,.txt" hidden>
+        <span id="upload-status" class="status"></span>
+      </div>
+      <div class="import-bar" id="import-bar" hidden>
+        <span class="import-text" id="import-text"></span>
+        <button id="import-overwrite" type="button" class="secondary">覆盖现有</button>
+        <button id="import-append" type="button" class="secondary">追加到末尾</button>
+        <button id="import-cancel" type="button" class="link-btn">取消</button>
+      </div>
     </section>
 
     <section id="sec-pref" class="panel">
@@ -72,6 +83,8 @@
     </div>
   </div>
 
+  <script src="vendor/pdf.min.js"></script>
+  <script src="vendor/mammoth.browser.min.js"></script>
   <script src="options.js"></script>
 </body>
 </html>

@@ -269,4 +269,114 @@ function updateResumeCount() {
 }
 $('resume-md').addEventListener('input', updateResumeCount);
 
+/* ---------- 上传简历文件并解析 ---------- */
+
+let pendingResumeMd = null;
+
+$('upload-resume').addEventListener('click', () => $('resume-file').click());
+
+$('resume-file').addEventListener('change', async e => {
+  const file = e.target.files && e.target.files[0];
+  e.target.value = ''; // 允许重复选择同一文件
+  if (!file) return;
+  if (file.size > 10 * 1024 * 1024) {
+    setUploadStatus('error', '文件超过 10MB，请换小一点的文件');
+    return;
+  }
+  hideImportBar();
+  setUploadStatus('working', '提取文本中…');
+  try {
+    const rawText = await extractText(file);
+    if (!rawText.trim()) throw new Error('未能从文件中提取到文本');
+    setUploadStatus('working', 'AI 整理中…');
+    const resp = await chrome.runtime.sendMessage({
+      type: 'PARSE_RESUME',
+      fileName: file.name,
+      rawText: rawText.slice(0, 30000),
+    });
+    if (!resp?.ok) throw new Error(parseErrorText(resp));
+    pendingResumeMd = resp.markdown;
+
+    if (!$('resume-md').value.trim()) {
+      // 简历区为空：直接导入
+      applyImport('overwrite');
+    } else {
+      // 非空：由用户选择覆盖 / 追加 / 取消
+      $('import-text').textContent = `解析完成（${pendingResumeMd.length} 字），当前已有简历：`;
+      $('import-bar').hidden = false;
+      setUploadStatus('', '');
+    }
+  } catch (err) {
+    setUploadStatus('error', err?.message || String(err));
+  }
+});
+
+function applyImport(mode) {
+  if (pendingResumeMd == null) return;
+  const ta = $('resume-md');
+  if (mode === 'append' && ta.value.trim()) {
+    ta.value = `${ta.value.trimEnd()}\n\n---\n\n${pendingResumeMd}`;
+  } else {
+    ta.value = pendingResumeMd;
+  }
+  pendingResumeMd = null;
+  hideImportBar();
+  updateResumeCount();
+  setUploadStatus('success', '已导入，确认无误后点保存');
+}
+
+$('import-overwrite').addEventListener('click', () => applyImport('overwrite'));
+$('import-append').addEventListener('click', () => applyImport('append'));
+$('import-cancel').addEventListener('click', () => {
+  pendingResumeMd = null;
+  hideImportBar();
+  setUploadStatus('', '');
+});
+
+function hideImportBar() {
+  $('import-bar').hidden = true;
+}
+
+function setUploadStatus(kind, text) {
+  const el = $('upload-status');
+  el.className = `status ${kind || ''}`.trim();
+  el.textContent = text;
+}
+
+function parseErrorText(resp) {
+  if (!resp) return '解析请求无响应';
+  switch (resp.error) {
+    case 'NO_API_KEY': return '请先配置 API Key';
+    case 'EMPTY_FILE': return resp.detail || '未能从文件中提取到文本';
+    case 'API_ERROR':
+    case 'NETWORK':
+    case 'TIMEOUT':
+      return `调用大模型失败：${resp.detail || resp.error}`;
+    default: return resp.detail || resp.error || '解析失败';
+  }
+}
+
+/* 按格式提取纯文本：pdf.js / mammoth 在本地解析，文件不离开本机 */
+async function extractText(file) {
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (ext === 'md' || ext === 'txt') return file.text();
+  if (ext === 'pdf') {
+    const pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
+    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    const parts = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+      const tc = await page.getTextContent();
+      parts.push(tc.items.map(it => it.str).join(' '));
+    }
+    return parts.join('\n');
+  }
+  if (ext === 'docx') {
+    const res = await window.mammoth.extractRawText({ arrayBuffer: await file.arrayBuffer() });
+    return res.value || '';
+  }
+  throw new Error('仅支持 PDF / DOCX / MD / TXT 文件');
+}
+
 load();

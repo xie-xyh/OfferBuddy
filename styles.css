@@ -348,6 +348,19 @@ body.options { min-height: 100vh; }
   pointer-events: none;
 }
 
+/* 简历导入选择条 */
+.import-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px dashed var(--jade);
+  border-radius: 10px;
+  background: var(--jade-soft);
+}
+.import-bar[hidden] { display: none; }
+.import-text { flex: 1; font-size: 13px; color: var(--ink); }
+
 /* 保存栏 */
 .save-bar {
   position: fixed;
