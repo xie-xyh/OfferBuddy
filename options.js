@@ -380,13 +380,29 @@ function parseErrorText(resp) {
 }
 
 /* 按格式提取纯文本：pdf.js / mammoth 在本地解析，文件不离开本机 */
+function withTimeout(promise, ms, label) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(label)), ms)),
+  ]);
+}
+
 async function extractText(file) {
   const ext = (file.name.split('.').pop() || '').toLowerCase();
   if (ext === 'md' || ext === 'txt') return file.text();
   if (ext === 'pdf') {
     const pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+    const data = await file.arrayBuffer();
+    /* 先走独立 worker；卡住/失败则降级主线程（fake worker，worker 文件已作为普通脚本加载）。
+       isEvalSupported:false 以遵守扩展页 CSP（禁 eval）。 */
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdf.worker.min.js';
-    const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+    let pdf;
+    try {
+      pdf = await withTimeout(pdfjsLib.getDocument({ data, isEvalSupported: false }).promise, 8000, 'PDF 打开超时');
+    } catch {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/__force_fake_worker__';
+      pdf = await withTimeout(pdfjsLib.getDocument({ data, isEvalSupported: false }).promise, 8000, 'PDF 打开超时');
+    }
     const parts = [];
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
