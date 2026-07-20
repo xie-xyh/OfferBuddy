@@ -19,8 +19,10 @@ const LEGACY_MODEL_MAP = {
 const SYSTEM_PROMPT = `你是招聘网页表单自动填写助手。用户会给你：
 1) 简历（Markdown 格式）
 2) 可选的附加填写指令
-3) 网页表单字段列表（JSON 数组，每项含 index/tag/type/name/id/label/group/placeholder/required；select 含 options；radio/checkbox 含 checked）。
-   其中 group 是字段所在板块/分组的标题（如“项目经验”“教育经历”）。复合字段（如“起止时间”的年/月多个下拉）共享同一个 group 或 label，请按语义分别填：年填 4 位年份、月填 1-12 的月份。
+3) 网页表单字段列表（JSON 数组，每项含 index/tag/type/name/id/label/group/entry/placeholder/required；select 与 fakeselect 含 options；radio/checkbox 含 checked）。
+   - group：字段所在板块/分组的标题（如“项目经验”“教育经历”）。复合字段（如“起止时间”的年/月多个下拉）共享同一个 group 或 label，请按语义分别填：年填 4 位年份、月填 1-12 的月份。
+   - entry：同一 group 下的第几段经历（如教育经历有两段，entry=1 为第 1 段、entry=2 为第 2 段）。请把简历中该类经历按先后顺序与 entry 一一对应。
+   - type=richtext：富文本框，按纯文本填写。type=fakeselect：自定义下拉，必须从 options 中选一项原文返回。
 
 请判断每个字段应填的内容，返回一个纯 JSON 对象：{ "字段index（字符串）": "要填写的值（字符串）" }。
 
@@ -128,6 +130,21 @@ async function callChat(cfg, systemPrompt, userMessage, { jsonMode = true } = {}
   return { ok: true, data: obj };
 }
 
+/* 瞬时错误（网络/超时/5xx/JSON 解析失败）自动重试，最多 3 次 */
+async function callChatWithRetry(cfg, systemPrompt, userMessage, opts) {
+  let last = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(r => setTimeout(r, 1000 * attempt));
+    const r = await callChat(cfg, systemPrompt, userMessage, opts);
+    if (r.ok) return r;
+    last = r;
+    const retryable = ['NETWORK', 'TIMEOUT', 'BAD_JSON'].includes(r.error)
+      || (r.error === 'API_ERROR' && /HTTP 5\d\d/.test(r.detail || ''));
+    if (!retryable) return r;
+  }
+  return last;
+}
+
 async function generateFill(msg) {
   const { cfg, error } = await loadConfig();
   if (error) return error;
@@ -147,7 +164,7 @@ async function generateFill(msg) {
     '请返回 JSON：{ "字段序号": "要填写的值" }',
   ].filter(line => line !== '').join('\n');
 
-  const r = await callChat(cfg, SYSTEM_PROMPT, userMessage);
+  const r = await callChatWithRetry(cfg, SYSTEM_PROMPT, userMessage);
   if (!r.ok) return r;
   return { ok: true, values: r.data };
 }
@@ -166,7 +183,7 @@ async function planEntries(msg) {
     '请返回 JSON：{ "addClicks": { "s0": 点击次数 } }',
   ].join('\n');
 
-  const r = await callChat(cfg, PLAN_PROMPT, userMessage);
+  const r = await callChatWithRetry(cfg, PLAN_PROMPT, userMessage);
   if (!r.ok) return r;
   return { ok: true, addClicks: r.data.addClicks || {} };
 }
@@ -187,7 +204,7 @@ async function parseResume(msg) {
     '请整理为 Markdown 简历。',
   ].join('\n');
 
-  const r = await callChat(cfg, RESUME_PARSE_PROMPT, userMessage, { jsonMode: false });
+  const r = await callChatWithRetry(cfg, RESUME_PARSE_PROMPT, userMessage, { jsonMode: false });
   if (!r.ok) return r;
   if (!r.text) return { ok: false, error: 'EMPTY_RESULT', detail: '大模型未返回内容' };
   return { ok: true, markdown: r.text };

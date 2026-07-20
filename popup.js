@@ -22,7 +22,8 @@ fillBtn.addEventListener('click', async () => {
       return;
     }
     await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
-    const resp = await chrome.tabs.sendMessage(tab.id, { type: 'RESUME_FILL_START' });
+    const refill = document.getElementById('refill').checked;
+    const resp = await chrome.tabs.sendMessage(tab.id, { type: 'RESUME_FILL_START', refill });
     handleResult(resp);
   } catch (e) {
     setStatus('error', `失败：${e?.message || e}`);
@@ -37,8 +38,11 @@ function handleResult(resp) {
     return;
   }
   if (resp.ok) {
-    const extra = resp.skipped && resp.skipped.length ? `；跳过：${resp.skipped.join('、')}` : '';
-    setStatus('success', `已填写 ${resp.filled} / ${resp.total} 个字段${extra}。请核对后手动提交。`);
+    const parts = [`已填写 ${resp.filled} / ${resp.total} 个字段`];
+    if (resp.existing) parts.push(`${resp.existing} 个已有内容未动`);
+    if (resp.requiredEmpty) parts.push(`${resp.requiredEmpty} 个必填待补（页面已标黄）`);
+    if (resp.skipped && resp.skipped.length) parts.push(`跳过：${resp.skipped.join('、')}`);
+    setStatus('success', parts.join('；'));
     return;
   }
   switch (resp.error) {

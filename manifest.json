@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "AI 简历自动填写",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "description": "基于大模型识别招聘网页表单，按你的简历（Markdown）自动填写。支持多家模型厂商，填充后请人工核对再提交。",
   "icons": {
     "16": "assets/offerbuddy-logo-v3-16.png",

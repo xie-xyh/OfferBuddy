@@ -184,6 +184,16 @@ body.popup {
   padding-top: 8px;
   border-top: 1px solid var(--line);
 }
+.popup .check {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
+}
+.popup .check input { accent-color: var(--ink); margin: 0; }
 
 /* ---------- options：侧栏 + 双栏内容 ---------- */
 

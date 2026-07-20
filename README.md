@@ -12,7 +12,7 @@
   </p>
   <p>
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome MV3" />
-    <img src="https://img.shields.io/badge/version-0.4.1-0E8A66" alt="version" />
+    <img src="https://img.shields.io/badge/version-0.5.0-0E8A66" alt="version" />
     <img src="https://img.shields.io/badge/license-MIT-blue" alt="license" />
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
   </p>
@@ -28,6 +28,11 @@
 - **📥 上传简历解析** — 支持 PDF / DOCX / MD / TXT，本地提取文本（文件不离开本机），AI 整理为 Markdown；内容为空直接导入，非空可选覆盖 / 追加 / 取消
 - **🧩 添加多条经历** — 识别「＋ 添加教育/工作/项目经历」按钮，按简历段数自动补齐条目再填写
 - **🎯 选择类字段精准匹配** — 下拉框精确/包含/数字三级匹配（年龄、年限、毕业年份）；日期兼容「1995年6月」等中文写法
+- **🧱 多段经历对齐** — 同名字段自动编号（教育经历 #1 / #2），按简历经历顺序一一对应填写
+- **✋ 不覆盖已填内容** — 已有值的字段默认跳过，勾选「覆盖已有内容」才重写；填错可安全重跑
+- **✅ 本地校验 + 收尾提醒** — 邮箱/电话/日期/链接按类型校验，不合法标黄；结束后必填但留空的字段统一标黄
+- **🧩 自定义控件** — 支持 contenteditable 富文本；实验性支持 div 伪下拉（自动展开快照选项后点选）
+- **🔁 失败自动重试** — 网络抖动/超时/5xx/返回格式异常时自动重试，最多 3 次
 - **⚛️ 框架兼容** — 原生 setter + `input`/`change` 事件写值，React/Vue 受控组件不会被框架刷掉
 - **🤖 多厂商模型** — DeepSeek / OpenAI / Moonshot（Kimi）/ 智谱 GLM / 通义千问 / 任意 OpenAI 兼容接口，Key 按厂商分存
 - **🛡 安全默认** — 绝不自动提交表单；简历里没有的信息留空不编造；按需注入，不常驻后台
