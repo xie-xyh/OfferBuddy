@@ -106,6 +106,22 @@
   };
   const resolveModel = m => LEGACY_MODEL_MAP[m] || m;
 
+  /* 把设置页当前表单统一转换为 storage patch，供保存/测试/上传三条路径复用 */
+  function buildApiStoragePatch({ provider, apiKeys, apiKey, baseUrl, model, allowEmptyKey = false } = {}) {
+    const providerId = String(provider || '').trim();
+    const key = String(apiKey || '').trim();
+    const url = String(baseUrl || '').trim().replace(/\/+$/, '');
+    const modelId = String(model || '').trim();
+    if (!providerId || (!allowEmptyKey && !key) || !url || !modelId) return null;
+    const savedKeys = apiKeys && typeof apiKeys === 'object' && !Array.isArray(apiKeys) ? apiKeys : {};
+    return {
+      provider: providerId,
+      apiKeys: { ...savedKeys, [providerId]: key },
+      baseUrl: url,
+      model: modelId,
+    };
+  }
+
   return {
     norm,
     digitsOf,
@@ -118,5 +134,6 @@
     parseJsonObject,
     LEGACY_MODEL_MAP,
     resolveModel,
+    buildApiStoragePatch,
   };
 });

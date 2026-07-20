@@ -123,3 +123,55 @@ test('resolveModel: 旧模型映射到新型号', () => {
   assert.equal(OB.resolveModel('deepseek-reasoner'), 'deepseek-v4-pro');
   assert.equal(OB.resolveModel('kimi-k3'), 'kimi-k3');
 });
+
+/* ---------- buildApiStoragePatch ---------- */
+
+test('buildApiStoragePatch: 生成当前厂商配置并保留其他厂商 Key', () => {
+  assert.deepEqual(OB.buildApiStoragePatch({
+    provider: 'deepseek',
+    apiKeys: { openai: 'openai-key' },
+    apiKey: '  deepseek-key  ',
+    baseUrl: ' https://api.deepseek.com/// ',
+    model: ' deepseek-v4-flash ',
+  }), {
+    provider: 'deepseek',
+    apiKeys: {
+      openai: 'openai-key',
+      deepseek: 'deepseek-key',
+    },
+    baseUrl: 'https://api.deepseek.com',
+    model: 'deepseek-v4-flash',
+  });
+});
+
+test('buildApiStoragePatch: 配置不完整时返回 null', () => {
+  const base = {
+    provider: 'deepseek',
+    apiKeys: {},
+    apiKey: 'deepseek-key',
+    baseUrl: 'https://api.deepseek.com',
+    model: 'deepseek-v4-flash',
+  };
+  assert.equal(OB.buildApiStoragePatch({ ...base, apiKey: '   ' }), null);
+  assert.equal(OB.buildApiStoragePatch({ ...base, baseUrl: '' }), null);
+  assert.equal(OB.buildApiStoragePatch({ ...base, model: '' }), null);
+});
+
+test('buildApiStoragePatch: 手动保存时允许暂不配置 Key', () => {
+  assert.deepEqual(OB.buildApiStoragePatch({
+    provider: 'deepseek',
+    apiKeys: { openai: 'openai-key' },
+    apiKey: '',
+    baseUrl: 'https://api.deepseek.com',
+    model: 'deepseek-v4-flash',
+    allowEmptyKey: true,
+  }), {
+    provider: 'deepseek',
+    apiKeys: {
+      openai: 'openai-key',
+      deepseek: '',
+    },
+    baseUrl: 'https://api.deepseek.com',
+    model: 'deepseek-v4-flash',
+  });
+});

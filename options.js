@@ -3,8 +3,9 @@
    页面加载不回显明文，仅在用户主动点「显示」时可见。
    厂商预设在 shared/providers.js，纯逻辑在 shared/core.js。 */
 
+const OB = globalThis.OB;
 const PROVIDERS = globalThis.OB_PROVIDERS;
-const LEGACY_MODEL_MAP = globalThis.OB.LEGACY_MODEL_MAP;
+const LEGACY_MODEL_MAP = OB.LEGACY_MODEL_MAP;
 
 const $ = id => document.getElementById(id);
 
@@ -111,6 +112,26 @@ function currentModel() {
   return el.value.trim();
 }
 
+function currentApiStoragePatch({ allowEmptyKey = false } = {}) {
+  const p = PROVIDERS[currentProvider] || PROVIDERS.deepseek;
+  return OB.buildApiStoragePatch({
+    provider: currentProvider,
+    apiKeys,
+    apiKey: $('api-key').value,
+    baseUrl: $('base-url').value.trim() || p.baseUrl,
+    model: currentModel() || p.models[0] || '',
+    allowEmptyKey,
+  });
+}
+
+function currentApiConfigError() {
+  if (!$('api-key').value.trim()) return '请先填写 API Key';
+  const p = PROVIDERS[currentProvider] || PROVIDERS.deepseek;
+  if (!($('base-url').value.trim() || p.baseUrl)) return '请填写 Base URL';
+  if (!(currentModel() || p.models[0])) return '请填写模型名';
+  return 'API 配置不完整';
+}
+
 /* ---------- 概览卡 ---------- */
 
 function setOv(id, text, ok) {
@@ -152,32 +173,34 @@ async function ensureHostPermission(baseUrl) {
   }
 }
 
+async function storeApiConfig(patch, extra = {}) {
+  await chrome.storage.local.set({ ...patch, ...extra });
+  apiKeys = patch.apiKeys;
+  refreshOverview();
+}
+
+async function persistCurrentApiConfig(extra = {}, { allowEmptyKey = false } = {}) {
+  const patch = currentApiStoragePatch({ allowEmptyKey });
+  if (!patch) return { ok: false, message: currentApiConfigError() };
+  const granted = await ensureHostPermission(patch.baseUrl);
+  if (!granted) return { ok: false, message: '未授予该接口地址的访问权限' };
+  await storeApiConfig(patch, extra);
+  return { ok: true, patch };
+}
+
 $('save').addEventListener('click', async () => {
-  const baseUrl = $('base-url').value.trim() || PROVIDERS[currentProvider].baseUrl;
-  if (!baseUrl) {
-    $('save-status').className = 'status error';
-    $('save-status').textContent = '请填写 Base URL';
-    return;
-  }
-  const granted = await ensureHostPermission(baseUrl);
-  if (!granted) {
-    $('save-status').className = 'status error';
-    $('save-status').textContent = '未授予该接口地址的访问权限，已取消保存';
-    return;
-  }
-  apiKeys[currentProvider] = $('api-key').value.trim();
-  await chrome.storage.local.set({
-    provider: currentProvider,
-    apiKeys,
-    baseUrl,
-    model: currentModel() || PROVIDERS[currentProvider].models[0] || '',
+  const result = await persistCurrentApiConfig({
     resumeMd: $('resume-md').value,
     extraInstructions: $('extra-instructions').value,
-  });
+  }, { allowEmptyKey: true });
+  if (!result.ok) {
+    $('save-status').className = 'status error';
+    $('save-status').textContent = `${result.message}，已取消保存`;
+    return;
+  }
   $('save-status').className = 'status success';
   $('save-status').textContent = '已保存 ✓';
   setTimeout(() => { $('save-status').textContent = ''; }, 2000);
-  refreshOverview();
 });
 
 /* ---------- Key 显示 / 测试连接 ---------- */
@@ -190,23 +213,28 @@ $('toggle-key').addEventListener('click', () => {
 });
 
 $('test').addEventListener('click', async () => {
-  const key = $('api-key').value.trim();
-  const baseUrl = ($('base-url').value.trim() || PROVIDERS[currentProvider].baseUrl).replace(/\/+$/, '');
-  const model = currentModel();
   const status = $('test-status');
-  if (!key) {
+  const patch = currentApiStoragePatch();
+  if (!patch) {
     status.className = 'status error';
-    status.textContent = '请先填写 API Key';
+    status.textContent = currentApiConfigError();
+    return;
+  }
+  const granted = await ensureHostPermission(patch.baseUrl);
+  if (!granted) {
+    status.className = 'status error';
+    status.textContent = '未授予该接口地址的访问权限';
     return;
   }
   status.className = 'status';
   status.textContent = '测试中…';
   $('test').classList.add('loading');
   try {
-    let res = await fetch(`${baseUrl}/models`, { headers: { Authorization: `Bearer ${key}` } });
+    let res = await fetch(`${patch.baseUrl}/models`, { headers: { Authorization: `Bearer ${patch.apiKeys[patch.provider]}` } });
     if (res.ok) {
+      await storeApiConfig(patch);
       status.className = 'status success';
-      status.textContent = '连接成功 ✓';
+      status.textContent = '连接成功，配置已保存 ✓';
       return;
     }
     if (res.status === 401 || res.status === 403) {
@@ -215,26 +243,22 @@ $('test').addEventListener('click', async () => {
       return;
     }
     // 部分厂商没有 /models 接口，降级为最小对话请求
-    if (!model) {
-      status.className = 'status error';
-      status.textContent = '请填写模型名后再测试';
-      return;
-    }
-    res = await fetch(`${baseUrl}/chat/completions`, {
+    res = await fetch(`${patch.baseUrl}/chat/completions`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({ model, max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] }),
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${patch.apiKeys[patch.provider]}` },
+      body: JSON.stringify({ model: patch.model, max_tokens: 1, messages: [{ role: 'user', content: 'hi' }] }),
     });
     if (res.ok) {
+      await storeApiConfig(patch);
       status.className = 'status success';
-      status.textContent = '连接成功 ✓';
+      status.textContent = '连接成功，配置已保存 ✓';
     } else {
       status.className = 'status error';
       status.textContent = `连接失败：HTTP ${res.status}（请检查 Key / Base URL / 模型名）`;
     }
   } catch (e) {
     status.className = 'status error';
-    status.textContent = `请求失败：${e?.message || e}（自定义地址请先点保存授权）`;
+    status.textContent = `请求失败：${e?.message || e}`;
   } finally {
     $('test').classList.remove('loading');
   }
@@ -295,7 +319,14 @@ $('resume-md').addEventListener('input', updateResumeCount);
 
 let pendingResumeMd = null;
 
-$('upload-resume').addEventListener('click', () => $('resume-file').click());
+$('upload-resume').addEventListener('click', async () => {
+  const result = await persistCurrentApiConfig();
+  if (!result.ok) {
+    setUploadStatus('error', result.message);
+    return;
+  }
+  $('resume-file').click();
+});
 
 $('resume-file').addEventListener('change', async e => {
   const file = e.target.files && e.target.files[0];

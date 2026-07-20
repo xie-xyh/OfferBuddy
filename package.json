@@ -1,6 +1,6 @@
 {
   "name": "offerbuddy",
-  "version": "0.5.0",
+  "version": "0.5.4",
   "private": true,
   "description": "AI 驱动的简历自动填写 Chrome 扩展",
   "scripts": {

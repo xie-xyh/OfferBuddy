@@ -12,7 +12,7 @@
   </p>
   <p>
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome MV3" />
-    <img src="https://img.shields.io/badge/version-0.5.3-0E8A66" alt="version" />
+    <img src="https://img.shields.io/badge/version-0.5.4-0E8A66" alt="version" />
     <img src="https://img.shields.io/badge/license-MIT-blue" alt="license" />
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
   </p>
@@ -35,6 +35,7 @@
 - **🔁 失败自动重试** — 网络抖动/超时/5xx/返回格式异常时自动重试，最多 3 次
 - **⚛️ 框架兼容** — 原生 setter + `input`/`change` 事件写值，React/Vue 受控组件不会被框架刷掉
 - **🤖 多厂商模型** — DeepSeek / OpenAI / Moonshot（Kimi）/ 智谱 GLM / 通义千问 / 任意 OpenAI 兼容接口，Key 按厂商分存
+- **💾 配置自动同步** — 测试连接成功后自动保存当前 API 配置；上传简历前也会同步配置，无需额外点击保存
 - **🛡 安全默认** — 绝不自动提交表单；简历里没有的信息留空不编造；按需注入，不常驻后台
 
 ## 🚀 快速开始
@@ -54,7 +55,7 @@ git clone git@github.com:xie-xyh/OfferBuddy.git
 | 配置项 | 说明 |
 | --- | --- |
 | **厂商** | 卡片选择，自动填充 Base URL 与模型候选 |
-| **Key** | 对应厂商的 API Key，仅存本机 `chrome.storage.local`，按厂商分开保存 |
+| **Key** | 对应厂商的 API Key，仅存本机 `chrome.storage.local`，按厂商分开保存；「测试并保存」成功后即可直接上传解析 |
 | **模型** | 下拉选择，选「自定义」厂商时可自由输入 |
 | **简历** | 粘贴完整 Markdown 简历；或点「上传文件解析」导入 PDF / DOCX / MD / TXT |
 | **填写偏好** | 可选，如「期望薪资一律填面议」 |
