@@ -1,46 +1,10 @@
 /* OfferBuddy — 设置页：厂商 / Key / 模型 / 简历 / 填写偏好
    Key 安全：按厂商分开存储在 chrome.storage.local（仅本机），
-   页面加载不回显明文，仅在用户主动点「显示」时可见。 */
+   页面加载不回显明文，仅在用户主动点「显示」时可见。
+   厂商预设在 shared/providers.js，纯逻辑在 shared/core.js。 */
 
-/* 模型列表核实于 2026-07，以各厂商官方文档 / 接口为准 */
-const PROVIDERS = {
-  deepseek: {
-    name: 'DeepSeek',
-    baseUrl: 'https://api.deepseek.com',
-    models: ['deepseek-v4-flash', 'deepseek-v4-pro'],
-  },
-  openai: {
-    name: 'OpenAI',
-    baseUrl: 'https://api.openai.com/v1',
-    models: ['gpt-5.6-luna', 'gpt-5.6-terra', 'gpt-5.6', 'gpt-5.5', 'gpt-5.4-mini'],
-  },
-  moonshot: {
-    name: 'Moonshot（Kimi）',
-    baseUrl: 'https://api.moonshot.cn/v1',
-    models: ['kimi-k3', 'kimi-k2.6', 'kimi-k2.7-code'],
-  },
-  zhipu: {
-    name: '智谱 GLM',
-    baseUrl: 'https://open.bigmodel.cn/api/paas/v4',
-    models: ['glm-4.7-flash', 'glm-4.7', 'glm-5.1', 'glm-5.2'],
-  },
-  qwen: {
-    name: '通义千问',
-    baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    models: ['qwen3.6-flash', 'qwen3.7-plus', 'qwen3.7-max'],
-  },
-  custom: {
-    name: '自定义（OpenAI 兼容接口）',
-    baseUrl: '',
-    models: [],
-  },
-};
-
-/* 已下架/更名的旧模型 ID → 新 ID */
-const LEGACY_MODEL_MAP = {
-  'deepseek-chat': 'deepseek-v4-flash',
-  'deepseek-reasoner': 'deepseek-v4-pro',
-};
+const PROVIDERS = globalThis.OB_PROVIDERS;
+const LEGACY_MODEL_MAP = globalThis.OB.LEGACY_MODEL_MAP;
 
 const $ = id => document.getElementById(id);
 

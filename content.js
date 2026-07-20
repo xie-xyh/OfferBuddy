@@ -1,12 +1,16 @@
 /* OfferBuddy — 内容脚本
-   由 popup 通过 chrome.scripting.executeScript 按需注入：
+   由 popup 通过 chrome.scripting.executeScript 按需注入（先于它注入 shared/core.js）：
    识别字段（原生控件 + contenteditable 富文本 + 伪下拉，含分组与第几段经历）
    → 规划并点击「添加」→ 调大模型 → 本地校验 → 逐个可见地回填 → 必填缺漏标黄。
-   兼容 React/Vue 受控组件：原生 setter 设值 + 派发 input/change 事件。 */
+   纯逻辑（校验/匹配/分组编号等）在 shared/core.js，本文件只做 DOM 交互。 */
 
 (() => {
   if (window.__offerBuddyLoaded) return;
   window.__offerBuddyLoaded = true;
+
+  const OB = globalThis.OB;
+  const { norm, digitsOf, matchOption, normalizeDateValue, validateValue, assignEntryNumbers, isAddButtonText } = OB;
+  const ADD_TEXT_RE = OB.ADD_TEXT_RE;
 
   const MAX_FIELDS = 120;
   const MAX_FAKE_SELECTS = 10;
@@ -16,16 +20,12 @@
   const CLICK_WAIT_MS = 600;
   const PANEL_WAIT_MS = 350;
   const SKIP_INPUT_TYPES = new Set(['hidden', 'submit', 'button', 'image', 'reset', 'file', 'password']);
-  /* “＋ 添加”“添加教育经历”“新增一条工作经历” 都命中 */
-  const ADD_TEXT_RE = /^[+＋]?\s*(添加|新增)\s*(一段|一条|一项|个)?\s*(教育|学历|工作|实习|实践|项目|经历|经验|履历|证书|语言)?\s*$/;
   const HEADING_SEL = 'h1,h2,h3,h4,h5,h6,legend,strong,b,[class*="title"],[class*="header"],[class*="Title"],[class*="Header"]';
   /* 类名 token 形如 el-select / ant-select-selector / select__trigger，排除 selected 之类 */
   const SELECT_TOKEN_RE = /(^|[-_])select([-_]|$)|combobox|cascader/i;
   const PANEL_TOKEN_RE = /dropdown|popover|popper|menu|cascader|(^|[-_])select([-_]|$)/i;
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
-  const norm = s => (s || '').trim().toLowerCase();
-  const digitsOf = s => (String(s).match(/\d+/g) || []).join('');
 
   /* ---------- 基础工具 ---------- */
 
@@ -210,18 +210,6 @@
     return d;
   }
 
-  /* 同 group 下同名字段出现多次 → 视为多段经历，给字段标 entry（第几段） */
-  function assignEntryNumbers(fields) {
-    const keyOf = d => `${d.group}|${d.label || d.name || d.placeholder || d.type}`;
-    const occ = {};
-    fields.forEach(d => { const k = keyOf(d); occ[k] = (occ[k] || 0) + 1; d.entry = occ[k]; });
-    const max = {};
-    fields.forEach(d => { const k = keyOf(d); max[k] = Math.max(max[k] || 0, d.entry); });
-    const dupGroups = new Set();
-    fields.forEach(d => { if (d.group && max[keyOf(d)] > 1) dupGroups.add(d.group); });
-    fields.forEach(d => { if (!dupGroups.has(d.group)) delete d.entry; });
-  }
-
   async function collectFields() {
     const nativeEls = [...document.querySelectorAll('input, textarea, select')]
       .filter(el => {
@@ -310,26 +298,6 @@
     el.dispatchEvent(new Event('blur', { bubbles: true }));
   }
 
-  /* select 匹配：精确 → 包含 → 数字（年龄/年限/年月等） */
-  function matchOption(options, value) {
-    const v = norm(value);
-    let match = options.find(o => norm(o.text) === v || norm(o.value ?? '') === v);
-    if (!match) {
-      match = options.find(o => {
-        const t = norm(o.text);
-        return t.includes(v) || v.includes(t);
-      });
-    }
-    if (!match) {
-      const vd = digitsOf(value);
-      if (vd) {
-        match = options.find(o => digitsOf(o.text) === vd)
-          || options.find(o => norm(o.text).startsWith(String(parseInt(vd, 10))));
-      }
-    }
-    return match || null;
-  }
-
   function fillSelect(el, value) {
     const opts = [...el.options]
       .filter(o => !o.disabled && norm(o.text) && !/^(请选择|请选择一项|select)/.test(norm(o.text)))
@@ -378,40 +346,6 @@
     return true;
   }
 
-  /* 兼容 "1995年6月"、"1995/6/3"、"1995-06" 等写法 → 浏览器要求的格式 */
-  function normalizeDateValue(value, type) {
-    const m = String(value).match(/(\d{4})\s*[年\/.\-]\s*(\d{1,2})\s*(?:[月\/.\-]\s*(\d{1,2})\s*日?)?/);
-    if (!m) return null;
-    const y = m[1];
-    const mo = m[2].padStart(2, '0');
-    if (type === 'month') return `${y}-${mo}`;
-    const d = (m[3] || '1').padStart(2, '0');
-    return `${y}-${mo}-${d}`;
-  }
-
-  /* 按字段类型做本地校验与格式化，不合法返回 null（标黄并跳过） */
-  function validateValue(field, rawValue) {
-    const v = String(rawValue).trim();
-    if (!v) return null;
-    switch (field.type) {
-      case 'email':
-        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v) ? v : null;
-      case 'tel':
-        return /^[+\d][\d\s\-()]{4,19}$/.test(v) ? v : null;
-      case 'url':
-        return /^(https?:\/\/)?[^\s]+\.[^\s]{2,}$/.test(v) ? v : null;
-      case 'number': {
-        const m = v.match(/-?\d+(\.\d+)?/);
-        return m ? m[0] : null;
-      }
-      case 'date':
-      case 'month':
-        return normalizeDateValue(v, field.type) || (/^\d{4}-\d{2}(-\d{2})?$/.test(v) ? v : null);
-      default:
-        return v;
-    }
-  }
-
   async function fillOne(el, field, value) {
     if (field.type === 'radio' || field.type === 'checkbox') return fillCheckable(el, value);
     if (field.type === 'richtext') return fillRichText(el, value);
@@ -436,9 +370,9 @@
       .filter(el => {
         if (el.disabled || !isVisible(el)) return false;
         const t = el.tagName === 'INPUT' ? (el.value || '').trim() : textOf(el);
-        if (!t || t.length > 15 || !ADD_TEXT_RE.test(t)) return false;
+        if (!isAddButtonText(t)) return false;
         // 必须是叶级元素，避免容器因子节点文本命中
-        if ([...el.children].some(c => ADD_TEXT_RE.test(textOf(c)))) return false;
+        if ([...el.children].some(c => isAddButtonText(textOf(c)))) return false;
         return /^(BUTTON|A|INPUT)$/.test(el.tagName)
           || el.getAttribute('role') === 'button'
           || !!el.onclick

@@ -1,0 +1,10 @@
+#!/bin/bash
+# OfferBuddy pre-commit：测试不通过则拒绝提交
+cd "$(git rev-parse --show-toplevel)" || exit 1
+echo "pre-commit: 运行测试…"
+if ! node --test; then
+  echo ""
+  echo "✗ 测试未通过，提交已阻止。请先修复再提交。"
+  exit 1
+fi
+echo "✓ 测试通过"

@@ -12,7 +12,7 @@
   </p>
   <p>
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome MV3" />
-    <img src="https://img.shields.io/badge/version-0.5.0-0E8A66" alt="version" />
+    <img src="https://img.shields.io/badge/version-0.5.1-0E8A66" alt="version" />
     <img src="https://img.shields.io/badge/license-MIT-blue" alt="license" />
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
   </p>
@@ -134,11 +134,25 @@ OfferBuddy/
 ├── content.js           # 页面注入：字段识别 / 添加条目 / 回填 / 过程可视化
 ├── popup.html / .js     # 弹窗：触发填写、展示结果
 ├── options.html / .js   # 设置页：厂商 / Key / 模型 / 简历 / 偏好
+├── shared/              # 纯逻辑 UMD 模块（浏览器与 Node 测试共用）
+│   ├── core.js          # 校验 / 匹配 / 日期归一 / 分组编号 / JSON 解析
+│   └── providers.js     # 厂商预设
+├── tests/               # node:test 测试（npm test）
 ├── styles.css           # popup 与设置页样式
-├── vendor/              # 本地解析库（pdf.js / mammoth，用于上传简历）
+├── vendor/              # 本地解析库（pdf.js / mammoth / marked / DOMPurify）
 ├── assets/              # 图标
 └── demo/form.html       # 本地模拟招聘表单（含受控组件与添加条目模拟）
 ```
+
+## 🔧 开发
+
+```bash
+npm test            # 运行测试（node:test，零依赖）
+```
+
+- **先测试后提交**：新功能 / 修复必须先更新 `tests/` 并保证 `npm test` 全绿（已内置 pre-commit 钩子强制执行，克隆后运行一次 `git config core.hooksPath .githooks` 启用）
+- 纯逻辑一律放 `shared/`（UMD，Node 可直接 require 测试），DOM / chrome API 代码保持薄层
+- 详细约定见 [AGENTS.md](AGENTS.md)
 
 ## 🗺 路线图
 

@@ -4,17 +4,15 @@
    - GENERATE_FILL（生成字段填写值）
    - PLAN_ENTRIES（规划「添加条目」点击次数）
    - PARSE_RESUME（把上传简历的原始文本整理为 Markdown）
-   API Key 按厂商分存于 chrome.storage.local，由用户在设置页自行填写。 */
+   API Key 按厂商分存于 chrome.storage.local，由用户在设置页自行填写。
+   纯逻辑（JSON 解析 / 旧模型映射等）在 shared/core.js。 */
+
+importScripts('shared/core.js');
+const OB = globalThis.OB;
 
 const DEFAULT_BASE_URL = 'https://api.deepseek.com';
 const DEFAULT_MODEL = 'deepseek-v4-flash';
 const REQUEST_TIMEOUT_MS = 60000;
-
-/* 已下架/更名的旧模型 ID → 新 ID（仅兜底显示与调用，不改写用户配置） */
-const LEGACY_MODEL_MAP = {
-  'deepseek-chat': 'deepseek-v4-flash',
-  'deepseek-reasoner': 'deepseek-v4-pro',
-};
 
 const SYSTEM_PROMPT = `你是招聘网页表单自动填写助手。用户会给你：
 1) 简历（Markdown 格式）
@@ -80,7 +78,7 @@ async function loadConfig({ requireResume = true } = {}) {
     cfg: {
       apiKey,
       baseUrl: (raw.baseUrl || DEFAULT_BASE_URL).replace(/\/+$/, ''),
-      model: LEGACY_MODEL_MAP[raw.model] || raw.model || DEFAULT_MODEL,
+      model: OB.resolveModel(raw.model) || DEFAULT_MODEL,
       resumeMd: raw.resumeMd,
       extraInstructions: raw.extraInstructions,
     },
@@ -125,7 +123,7 @@ async function callChat(cfg, systemPrompt, userMessage, { jsonMode = true } = {}
   const data = await res.json();
   const content = (data?.choices?.[0]?.message?.content || '').trim();
   if (!jsonMode) return { ok: true, text: content };
-  const obj = parseJsonObject(content);
+  const obj = OB.parseJsonObject(content);
   if (!obj) return { ok: false, error: 'BAD_JSON', detail: content.slice(0, 300) };
   return { ok: true, data: obj };
 }
@@ -208,19 +206,4 @@ async function parseResume(msg) {
   if (!r.ok) return r;
   if (!r.text) return { ok: false, error: 'EMPTY_RESULT', detail: '大模型未返回内容' };
   return { ok: true, markdown: r.text };
-}
-
-function parseJsonObject(text) {
-  try {
-    const v = JSON.parse(text);
-    if (v && typeof v === 'object' && !Array.isArray(v)) return v;
-  } catch { /* 继续尝试从文本中提取 */ }
-  const m = text.match(/\{[\s\S]*\}/);
-  if (m) {
-    try {
-      const v = JSON.parse(m[0]);
-      if (v && typeof v === 'object' && !Array.isArray(v)) return v;
-    } catch { /* 放弃 */ }
-  }
-  return null;
 }

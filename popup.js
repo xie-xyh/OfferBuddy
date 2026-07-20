@@ -21,7 +21,7 @@ fillBtn.addEventListener('click', async () => {
       setStatus('error', '当前页面不支持注入（仅支持 http/https 页面）');
       return;
     }
-    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+    await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['shared/core.js', 'content.js'] });
     const refill = document.getElementById('refill').checked;
     const resp = await chrome.tabs.sendMessage(tab.id, { type: 'RESUME_FILL_START', refill });
     handleResult(resp);
