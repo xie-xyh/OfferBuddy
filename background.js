@@ -12,7 +12,8 @@ const OB = globalThis.OB;
 
 const DEFAULT_BASE_URL = 'https://api.deepseek.com';
 const DEFAULT_MODEL = 'deepseek-v4-flash';
-const REQUEST_TIMEOUT_MS = 60000;
+const REQUEST_TIMEOUT_MS = 120000; // 长简历解析可能超过 60s
+const KEEPALIVE_INTERVAL_MS = 20000; // MV3 Service Worker 30s 无活动会被终止
 
 const SYSTEM_PROMPT = `你是招聘网页表单自动填写助手。用户会给你：
 1) 简历（Markdown 格式）
@@ -89,6 +90,8 @@ async function loadConfig({ requireResume = true } = {}) {
 async function callChat(cfg, systemPrompt, userMessage, { jsonMode = true } = {}) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  // 长请求期间每 20s ping 一次，防止 Service Worker 被 Chrome 终止（30s 空闲限制）
+  const keepAlive = setInterval(() => { chrome.runtime.getPlatformInfo(() => {}); }, KEEPALIVE_INTERVAL_MS);
   let res;
   try {
     res = await fetch(`${cfg.baseUrl}/chat/completions`, {
@@ -109,10 +112,11 @@ async function callChat(cfg, systemPrompt, userMessage, { jsonMode = true } = {}
       }),
     });
   } catch (e) {
-    if (e?.name === 'AbortError') return { ok: false, error: 'TIMEOUT', detail: '请求超时（60s）' };
+    if (e?.name === 'AbortError') return { ok: false, error: 'TIMEOUT', detail: '请求超时（120s）' };
     return { ok: false, error: 'NETWORK', detail: String(e?.message || e) };
   } finally {
     clearTimeout(timer);
+    clearInterval(keepAlive);
   }
 
   if (!res.ok) {

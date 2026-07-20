@@ -12,7 +12,7 @@
   </p>
   <p>
     <img src="https://img.shields.io/badge/Chrome-Manifest_V3-4285F4?logo=googlechrome&logoColor=white" alt="Chrome MV3" />
-    <img src="https://img.shields.io/badge/version-0.5.2-0E8A66" alt="version" />
+    <img src="https://img.shields.io/badge/version-0.5.3-0E8A66" alt="version" />
     <img src="https://img.shields.io/badge/license-MIT-blue" alt="license" />
     <img src="https://img.shields.io/badge/PRs-welcome-brightgreen" alt="PRs welcome" />
   </p>
